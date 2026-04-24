@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -54,29 +54,23 @@ const getPianoKeys = (root, quality, extension, inversion) => {
   const rootIdx = NOTES.indexOf(root);
   if (rootIdx === -1) return [];
   
-  // Identifiera de tre grundpelarna i ackordet
   let thirdPitch = rootIdx + (extension === 'sus4' ? 5 : extension === 'sus2' ? 2 : (quality === 'm' ? 3 : 4));
   let fifthPitch = rootIdx + 7;
   
   let pitches = [rootIdx, thirdPitch, fifthPitch];
   
-  // Lägg till eventuella färgningar
   if (extension === '7') pitches.push(rootIdx + 10);
   if (extension === 'maj7') pitches.push(rootIdx + 11);
-  if (extension === 'add9') pitches.push(rootIdx + 2); // 9:an spelas tätt i samma oktav (som en 2:a)
+  if (extension === 'add9') pitches.push(rootIdx + 2); 
   
-  // Bestäm vilken ton som SKA vara i basen (lägst) beroende på omvändning
   let targetPitch = rootIdx;
   if (inversion === 1) targetPitch = thirdPitch;
   if (inversion === 2) targetPitch = fifthPitch;
   
-  // Motsvarande placering inom en enda oktav (0-11)
   let targetPC = targetPitch % 12;
   
-  // Konstruera ackordet genom att tvinga alla andra toner att ligga *över* eller *på* bastonen
   let keys = pitches.map(p => {
     let pc = p % 12;
-    // Om tonen är lägre än vår valda baston, flyttar vi upp den en oktav
     if (pc < targetPC) {
       return pc + 12;
     }
@@ -84,21 +78,20 @@ const getPianoKeys = (root, quality, extension, inversion) => {
   });
   
   keys.sort((a,b) => a - b);
-  return [...new Set(keys)]; // Ta bort eventuella dubbletter
+  return [...new Set(keys)]; 
 };
 
 const formatPianoName = (chordData) => {
   if (!chordData) return '';
   let q = chordData.quality === 'm' ? 'm' : '';
   if (chordData.extension === 'sus4' || chordData.extension === 'sus2') {
-    q = ''; // Sus-ackord har varken dur- eller moll-ters i namnet
+    q = ''; 
   }
   return `${chordData.root}${q}${chordData.extension || ''}`;
 };
 
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
-// Mall för en helt ny formdel
 const createNewSection = (isFirst = false) => ({
   id: generateId(),
   formSection: isFirst ? 'Formdel: Intro' : 'Ny Formdel',
@@ -116,7 +109,6 @@ const createNewSection = (isFirst = false) => ({
   frettedChordState: { guitar: {}, ukulele: {}, mandolin: {} },
   pianoChordState: {}
 });
-
 
 // --- Visuella Komponenter ---
 
@@ -288,18 +280,13 @@ const StepCell = ({ step, span = 1, isBeat, children, className = '', stepsPerMe
 
 const TrackRowContainer = ({ title, icon: Icon, borderColor, bgHeader, bgContent, textColor, children, controls, onClear, isEditMode }) => (
   <div className={`flex border-b border-stone-300 group/track ${bgContent} relative`}>
-    {/* Vänsterkolumnen är nu w-44 (ännu bredare) för att garantera att dropdown-menyer inte krockar med strängnamnen */}
     <div className={`w-44 shrink-0 border-r border-stone-300 ${bgHeader} flex flex-col justify-between p-3 border-l-[6px] ${borderColor} z-30 relative`}>
-      
-      {/* Ikon och Titel */}
       <div className={`flex flex-col items-start gap-1.5 ${textColor} w-full opacity-90 pr-6`}>
         <div className="p-1 bg-white/60 rounded shadow-sm border border-white/50">
           <Icon size={20} className="shrink-0" />
         </div>
         <h3 className="font-bold text-[10px] tracking-widest uppercase break-words w-full leading-tight">{title}</h3>
       </div>
-      
-      {/* Bottenytan: Soptunna till vänster, Controls till höger. pr-8 är en hård gräns mot strängnamnen! */}
       <div className="mt-auto w-full pt-3 flex items-end gap-2 pr-8">
         {isEditMode && onClear && (
           <button 
@@ -310,14 +297,12 @@ const TrackRowContainer = ({ title, icon: Icon, borderColor, bgHeader, bgContent
             <Trash2 size={13} />
           </button>
         )}
-        
         {controls && (
           <div className="flex-1 min-w-0">
             {controls}
           </div>
         )}
       </div>
-
     </div>
     <div className="flex-1 flex relative">
       {children}
@@ -331,7 +316,6 @@ const TrackRowContainer = ({ title, icon: Icon, borderColor, bgHeader, bgContent
 export default function App() {
   const [isEditMode, setIsEditMode] = useState(true);
   
-  // App-Globala variabler
   const [songTitle, setSongTitle] = useState("Ny Låt");
   const [artist, setArtist] = useState("Artist / Kompositör");
   
@@ -339,28 +323,35 @@ export default function App() {
   const [frettedType, setFrettedType] = useState('guitar');
   const [frettedMode, setFrettedMode] = useState('chord'); 
   
-  // Sektioner innehåller nu alla instrumentens "state"
   const [sections, setSections] = useState([createNewSection(true)]);
   
   const [chordModal, setChordModal] = useState({ isOpen: false, instrument: null, sectionId: null, step: null, data: null });
 
-  // --- Tillstånd för att "måla" (dra) trumslag ---
   const [isDragging, setIsDragging] = useState(false);
   const [dragValue, setDragValue] = useState(true);
   const [dragType, setDragType] = useState(null);
 
+  // Referens för att automatiskt storleksanpassa titelfältet utan krockar
+  const titleRef = useRef(null);
+
   useEffect(() => {
-    // Lyssnar globalt så att dragningen slutar även om man släpper musen utanför fönstret
     const handleMouseUp = () => setIsDragging(false);
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
   }, []);
 
+  // Fixar höjden på titeln varje gång den ändras så att den pressar ner artisten rätt
+  useEffect(() => {
+    if (titleRef.current) {
+      titleRef.current.style.height = 'auto'; 
+      titleRef.current.style.height = `${titleRef.current.scrollHeight}px`;
+    }
+  }, [songTitle, isEditMode]);
+
   const stepsPerMeasure = 8; 
   const measuresPerSystem = 4;
   const systemsPerPage = 2; 
 
-  // Hjälpfunktion för att uppdatera en specifik sektion
   const updateSection = (sectionId, updater) => {
     setSections(prev => prev.map(sec => sec.id === sectionId ? updater(sec) : sec));
   };
@@ -386,16 +377,6 @@ export default function App() {
     updateSection(sectionId, sec => ({ ...sec, [field]: value }));
   };
 
-  const toggleDrum = (sectionId, type, step) => {
-    updateSection(sectionId, sec => ({
-      ...sec,
-      drumState: {
-        ...sec.drumState,
-        [type]: { ...sec.drumState[type], [step]: !sec.drumState[type][step] }
-      }
-    }));
-  };
-
   const setDrumStep = (sectionId, type, step, value) => {
     updateSection(sectionId, sec => ({
       ...sec,
@@ -406,7 +387,6 @@ export default function App() {
     }));
   };
 
-  // Raderar innehållet för ett specifikt instrument på en specifik rad
   const clearTrackSystem = (sectionId, trackType, stepsToClear) => {
     updateSection(sectionId, sec => {
       const newSec = { ...sec };
@@ -423,7 +403,6 @@ export default function App() {
         newSec.drumRepeats = newRepeats;
       } 
       else if (trackType === 'bass') {
-        // Lägger till stöd för den extra B-strängen när vi raderar
         const b = { G: {...sec.bassState.G}, D: {...sec.bassState.D}, A: {...sec.bassState.A}, E: {...sec.bassState.E}, B: {...(sec.bassState.B || {})} };
         stepsToClear.forEach(s => { delete b.G[s]; delete b.D[s]; delete b.A[s]; delete b.E[s]; if(b.B) delete b.B[s]; });
         newSec.bassState = b;
@@ -467,7 +446,7 @@ export default function App() {
 
   const updateBass = (sectionId, str, step, val) => {
     if (val !== '' && !/^\d+$/.test(val)) return;
-    if (val !== '' && parseInt(val, 10) > 21) return; // Spärr: Max 21 band för bas
+    if (val !== '' && parseInt(val, 10) > 21) return;
     updateSection(sectionId, sec => {
       const newBass = { ...sec.bassState, [str]: { ...sec.bassState[str] } };
       val === '' ? delete newBass[str][step] : newBass[str][step] = val.slice(0,2);
@@ -477,7 +456,7 @@ export default function App() {
 
   const updateFrettedTab = (sectionId, str, step, val) => {
     if (val !== '' && !/^\d+$/.test(val)) return;
-    if (val !== '' && parseInt(val, 10) > 24) return; // Spärr: Max 24 band för stränginstrument
+    if (val !== '' && parseInt(val, 10) > 24) return;
     updateSection(sectionId, sec => {
       const typeState = { ...sec.frettedTabState[frettedType], [str]: { ...sec.frettedTabState[frettedType][str] } };
       val === '' ? delete typeState[str][step] : typeState[str][step] = val.slice(0,2);
@@ -542,7 +521,6 @@ export default function App() {
     }, 500);
   };
 
-  // Beräkna alla sidor globalt för hela dokumentet
   const globalPages = [];
   sections.forEach((section, sectionIndex) => {
     const systems = [];
@@ -553,7 +531,6 @@ export default function App() {
       });
     }
     
-    // Varje sektion "Formdel" börjar på en ny sida
     for (let i = 0; i < systems.length; i += systemsPerPage) {
       globalPages.push({
         section,
@@ -573,18 +550,20 @@ export default function App() {
       style={{ backgroundImage: NOISE_TEXTURE }}
     >
       
-      {/* --- LJUS, FRÄSCH HEADER MED FROSTAT GLAS --- */}
+      {/* Tvingar webbläsaren att utgå från marginalfria A4-sidor i PDF-läge */}
+      <style type="text/css" media="print">
+        {`
+          @page { size: A4 portrait; margin: 0; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        `}
+      </style>
+
+      {/* --- HEADER --- */}
       <header className="w-full flex flex-wrap items-center justify-between px-6 py-4 bg-[#fcfbf9]/85 backdrop-blur-md border-b border-stone-300/50 shadow-sm z-40 sticky top-0 print:hidden text-stone-800">
         
-        {/* Ny, sammanhållen logotyp-container (Badge/Pill) */}
         <div className="flex items-center gap-3 bg-white/60 border border-white/80 p-1.5 pr-5 rounded-2xl shadow-sm transition-colors hover:bg-white/80 select-none">
-          
-          {/* Ikonen */}
           <div className="w-10 h-10 rounded-xl bg-stone-900 flex items-center justify-center shadow-inner border border-stone-700 relative overflow-hidden group shrink-0">
-            {/* Subtil inre gradient för djup */}
             <div className="absolute inset-0 bg-gradient-to-tr from-stone-800 to-stone-600 opacity-40"></div>
-            
-            {/* 4 färgstaplar som representerar instrumenten: Trummor (Blå), Bas (Rosa), Gitarr (Teal), Piano (Indigo) */}
             <div className="flex items-end gap-[3px] h-[18px] relative z-10 group-hover:scale-110 transition-transform duration-300">
               <div className="w-1.5 h-2.5 bg-blue-400 rounded-sm"></div>
               <div className="w-1.5 h-[16px] bg-rose-400 rounded-sm"></div>
@@ -592,15 +571,12 @@ export default function App() {
               <div className="w-1.5 h-3 bg-indigo-400 rounded-sm"></div>
             </div>
           </div>
-          
-          {/* Typografin (tightare och lite nedskalad för att passa i badgen) */}
           <div className="flex flex-col justify-center pt-0.5">
             <h1 className="text-lg font-black tracking-tighter text-stone-900 flex items-baseline gap-1 leading-none">
               ALEX <span className="font-bold text-stone-500 tracking-tight text-[15px]">CHEAT SHEET</span>
             </h1>
             <span className="text-[7px] font-bold uppercase tracking-widest text-stone-400 mt-0.5 ml-0.5">Instrumentstämmor & Form</span>
           </div>
-
         </div>
 
         <div className="flex items-center gap-4 flex-wrap">
@@ -643,18 +619,20 @@ export default function App() {
           return (
             <div 
               key={`page-${pageIndex}`} 
-              className="w-full max-w-[900px] bg-[#fdfdfc] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] rounded-sm min-h-[1272px] flex flex-col relative print:shadow-none print:break-after-page border border-stone-200/60 print:border-none print:bg-white"
-              style={{ backgroundImage: PAPER_TEXTURE }}
+              // print:w-[210mm] och print:h-[297mm] tvingar webbläsaren att matcha pappret exakt
+              className="w-full max-w-[900px] bg-[#fdfdfc] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] rounded-sm flex flex-col relative print:shadow-none print:break-after-page border border-stone-200/60 print:border-none print:bg-white print:w-[210mm] print:h-[297mm] print:max-w-none print:overflow-hidden print:m-0"
+              style={{ 
+                backgroundImage: PAPER_TEXTURE,
+                minHeight: '1122px' // Exakt en A4-höjd vid 96 DPI (visuellt på skärmen)
+              }}
             >
               
-              {/* Sidrubrik (Bara om det är början på en ny formdel) */}
               {isFirstPageOfSection && (
-                <div className={`px-10 ${isFirstPageOfDoc ? 'pt-10 pb-8' : 'pt-8 pb-3'} border-b-[3px] border-stone-900 mx-8 mt-4 relative`}>
+                <div className={`px-10 ${isFirstPageOfDoc ? 'pt-10 pb-8 print:pt-6 print:pb-4' : 'pt-8 pb-3 print:pt-6 print:pb-2'} border-b-[3px] border-stone-900 mx-8 mt-4 relative`}>
                   
                   {isFirstPageOfDoc ? (
                     <div className="w-full flex justify-between items-start relative">
                       
-                      {/* Tempo/Tonart (Vänster) - Nedflyttad med mt-3 för att linjera med titelns överkant */}
                       <input
                         type="text"
                         value={section.tempoKey}
@@ -664,32 +642,27 @@ export default function App() {
                         placeholder="Tempo / Tonart..."
                       />
 
-                      {/* Låttitel och Artist (Mitten) - maxbredd och textarea för automatisk radbrytning */}
-                      <div className="flex-1 flex flex-col items-center max-w-[450px] mx-4">
+                      {/* Flex-col gap-2 löser krocken. Titeln resizar nu korrekt utan att putta snett */}
+                      <div className="flex-1 flex flex-col items-center max-w-[450px] mx-4 gap-2">
                         <textarea 
+                          ref={titleRef}
                           value={songTitle}
                           onChange={e => setSongTitle(e.target.value)}
-                          onInput={e => {
-                            e.target.style.height = 'auto';
-                            e.target.style.height = e.target.scrollHeight + 'px';
-                          }}
                           readOnly={!isEditMode}
                           rows={1}
-                          className={`text-4xl md:text-5xl font-black bg-transparent border-none outline-none text-stone-900 w-full text-center placeholder-stone-300 transition-all tracking-tighter resize-none overflow-hidden leading-tight ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'}`}
+                          className={`text-4xl md:text-5xl font-black bg-transparent border-none outline-none text-stone-900 w-full text-center placeholder-stone-300 transition-all tracking-tighter resize-none overflow-hidden leading-[1.1] ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'}`}
                           placeholder="LÅTENS TITEL..."
-                          style={{ minHeight: '1.2em' }}
                         />
                         <input 
                           type="text" 
                           value={artist}
                           onChange={e => setArtist(e.target.value)}
                           readOnly={!isEditMode}
-                          className={`text-lg md:text-xl font-bold bg-transparent border-none outline-none text-stone-500 w-full text-center placeholder-stone-300 mt-2 transition-all tracking-tight ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'}`}
+                          className={`text-lg md:text-xl font-bold bg-transparent border-none outline-none text-stone-500 w-full text-center placeholder-stone-300 transition-all tracking-tight ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'}`}
                           placeholder="Artist / Kompositör..."
                         />
                       </div>
 
-                      {/* Formdel (Höger) - Nedflyttad med mt-3 för att linjera med titelns överkant */}
                       <input
                         type="text"
                         value={section.formSection}
@@ -723,17 +696,17 @@ export default function App() {
                 </div>
               )}
 
-              {/* Innehåll: Rader */}
-              <div className={`p-8 flex flex-col gap-12 ${!isFirstPageOfSection ? 'pt-16' : ''}`}>
+              {/* Innehåll: Rader. Gap-12 blir gap-6 under print för att tvinga dem att få plats */}
+              <div className={`p-8 print:p-6 flex flex-col gap-12 print:gap-6 ${!isFirstPageOfSection ? 'pt-16 print:pt-8' : ''}`}>
                 {systems.map((system, systemIndex) => {
                   const startStep = system.startMeasure * stepsPerMeasure;
                   const endStep = startStep + (system.measureCount * stepsPerMeasure);
                   const systemSteps = Array.from({ length: endStep - startStep }).map((_, i) => startStep + i);
 
                   return (
-                    <div key={`sec-${section.id}-sys-${system.startMeasure}`} className="flex flex-col border-2 border-stone-300 rounded-md shadow-sm bg-white overflow-hidden">
+                    <div key={`sec-${section.id}-sys-${system.startMeasure}`} className="flex flex-col border-2 border-stone-300 rounded-md shadow-sm bg-white overflow-hidden print:break-inside-avoid">
                       
-                      {/* Tidslinje Header - nu synkad till w-44 precis som spåren! */}
+                      {/* Tidslinje Header */}
                       <div className="flex bg-stone-100 border-b-2 border-stone-300 relative">
                         <div className="w-44 shrink-0 border-r border-stone-300 flex items-center px-4 border-l-[6px] border-transparent">
                           <span className="text-xs font-bold text-stone-500 uppercase tracking-widest">Takt {system.startMeasure + 1}-{system.startMeasure + system.measureCount}</span>
@@ -774,7 +747,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Trummor (Med "Dra och måla"-funktion) */}
+                      {/* Trummor */}
                       <TrackRowContainer 
                         title="Trummor" icon={Drum} borderColor="border-l-blue-500" bgHeader="bg-blue-50/60" bgContent="bg-blue-50/20" textColor="text-blue-900" 
                         isEditMode={isEditMode} onClear={() => clearTrackSystem(section.id, 'drums', systemSteps)}
@@ -796,7 +769,7 @@ export default function App() {
                                       className={`w-full h-full flex items-center justify-center transition-colors ${isEditMode && !isHidden ? 'hover:bg-blue-200/80' : ''}`} 
                                       onMouseDown={(e) => {
                                         if (!isEditMode || isHidden) return;
-                                        e.preventDefault(); // Förhindrar att text markeras
+                                        e.preventDefault(); 
                                         const newValue = !section.drumState[drumType][s];
                                         setIsDragging(true);
                                         setDragValue(newValue);
@@ -1108,7 +1081,6 @@ export default function App() {
             
             <div className="overflow-y-auto bg-stone-50/50">
               {chordModal.instrument === 'fretted' ? (
-                // MANUELL STRÄNG-EDITOR
                 <div className="p-5 flex flex-col gap-5">
                   <div>
                     <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1 block">Ackordets namn</span>
@@ -1259,7 +1231,6 @@ export default function App() {
                   </div>
                 </div>
               ) : (
-                // BEFINTLIG PIANO-EDITOR
                 <div className="p-5 flex flex-col gap-6">
                   <div>
                     <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 block">Grundton</span>
