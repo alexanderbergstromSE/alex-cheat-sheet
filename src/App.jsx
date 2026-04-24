@@ -697,7 +697,7 @@ export default function App() {
               )}
 
               {/* Innehåll: Rader. Gap-12 blir gap-6 under print för att tvinga dem att få plats */}
-              <div className={`p-8 print:p-6 flex flex-col gap-12 print:gap-6 ${!isFirstPageOfSection ? 'pt-16 print:pt-8' : ''}`}>
+              <div className={`p-8 print:p-4 flex flex-col gap-12 print:gap-4 ${!isFirstPageOfSection ? 'pt-16 print:pt-6' : ''}`}>
                 {systems.map((system, systemIndex) => {
                   const startStep = system.startMeasure * stepsPerMeasure;
                   const endStep = startStep + (system.measureCount * stepsPerMeasure);
@@ -754,7 +754,7 @@ export default function App() {
                       >
                         <div className="flex-1 flex flex-col py-1 relative z-10">
                           {['hihat', 'snare', 'kick'].map((drumType, index) => (
-                            <div key={drumType} className={`flex flex-1 min-h-[36px] relative ${index < 2 ? 'border-b border-stone-300/80' : ''}`}>
+                            <div key={drumType} className={`flex flex-1 min-h-[32px] relative ${index < 2 ? 'border-b border-stone-300/80' : ''}`}>
                               
                               <div className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 pointer-events-none bg-white/90 border border-blue-200 p-0.5 rounded-md z-30 shadow-sm flex items-center justify-center scale-[0.80]">
                                 {drumType === 'hihat' ? <HiHatIcon /> : drumType === 'snare' ? <SnareIcon /> : <KickIcon />}
@@ -830,7 +830,7 @@ export default function App() {
                       >
                         <div className="flex-1 flex flex-col py-1">
                           {BASS_INSTRUMENTS[bassType].strings.map(str => (
-                            <div key={`bass-${str}`} className="flex flex-1 min-h-[28px] relative">
+                            <div key={`bass-${str}`} className="flex flex-1 min-h-[24px] relative">
                               <div className="absolute top-1/2 left-0 w-full h-[1.5px] bg-stone-400 pointer-events-none" />
                               <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 text-[9px] text-rose-700 font-bold pointer-events-none bg-white/90 border border-rose-200 px-1 py-[1px] rounded-sm z-20 leading-none shadow-sm">{str}</div>
                               {systemSteps.map(s => (
@@ -876,7 +876,7 @@ export default function App() {
                           )
                         }
                       >
-                        <div className="flex-1 flex py-2 min-h-[100px]">
+                        <div className="flex-1 flex py-2 min-h-[85px]">
                           {systemSteps.filter(s => s % stepsPerMeasure === 0).map(measureStart => {
                             const s1 = measureStart;
                             const s2 = measureStart + 4;
@@ -964,7 +964,7 @@ export default function App() {
                         title="Piano" icon={Piano} borderColor="border-l-indigo-500" bgHeader="bg-indigo-50/60" bgContent="bg-indigo-50/20" textColor="text-indigo-900" 
                         isEditMode={isEditMode} onClear={() => clearTrackSystem(section.id, 'piano', systemSteps)}
                       >
-                        <div className="flex-1 flex py-2 min-h-[90px]">
+                        <div className="flex-1 flex py-2 min-h-[75px]">
                           {systemSteps.filter(s => s % stepsPerMeasure === 0).map(measureStart => {
                             const s1 = measureStart;
                             const s2 = measureStart + 4;
