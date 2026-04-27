@@ -1187,7 +1187,7 @@ export default function App() {
                             
                             {Array.from({length: numStrings}).map((_, i) => <line key={`sl-${i}`} x1={20 + i*gap} y1="25" x2={20 + i*gap} y2="150" stroke="#9ca3af" strokeWidth="1.5" />)}
 
-                            {bf >= 4 && <text x="16" y="31" fontSize="8" fill="#4b5563" fontWeight="bold" textAnchor="end">{bf}</text>}
+                            {bf >= 4 && <text x="16" y="25" fontSize="9" fill="#4b5563" fontWeight="bold" textAnchor="end" dominantBaseline="central">{bf}</text>}
 
                             {chordModal.data.capo && chordModal.data.capo > 0 && chordModal.data.capo <= 9 && (
                               <g>
@@ -1295,7 +1295,18 @@ export default function App() {
                       <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Start:</span>
                       <select
                         value={chordModal.data.baseFret || 1}
-                        onChange={(e) => setChordModal(prev => ({...prev, data: {...prev.data, baseFret: parseInt(e.target.value)}}))}
+                        onChange={(e) => setChordModal(prev => {
+                          const numStrings = prev.data.frets.length;
+                          return {
+                            ...prev, 
+                            data: {
+                              ...prev.data, 
+                              baseFret: parseInt(e.target.value),
+                              frets: Array(numStrings).fill(0),
+                              fingers: Array(numStrings).fill(null)
+                            }
+                          };
+                        })}
                         className="flex-1 bg-white border border-stone-300 rounded px-2 py-1.5 text-sm font-bold text-stone-700 outline-none focus:ring-2 focus:ring-teal-500 shadow-sm"
                       >
                         {Array.from({length: 12}, (_, i) => i + 1).map(b => <option key={`bf-${b}`} value={b}>Band {b}</option>)}
