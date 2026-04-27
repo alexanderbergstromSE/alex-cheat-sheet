@@ -35,17 +35,17 @@ const FRETTED_INSTRUMENTS = {
   guitar: {
     name: 'Gitarr',
     tabStrings: ['e', 'B', 'G', 'D', 'A', 'E'],
-    defaultChord: { name: 'C', frets: [-1, 3, 2, 0, 1, 0], fingers: [null, 3, 2, null, 1, null], capo: null }
+    defaultChord: { name: '', frets: [0, 0, 0, 0, 0, 0], fingers: [null, null, null, null, null, null], capo: null }
   },
   ukulele: {
     name: 'Ukulele',
     tabStrings: ['A', 'E', 'C', 'G'],
-    defaultChord: { name: 'C', frets: [0, 0, 0, 3], fingers: [null, null, null, 3], capo: null }
+    defaultChord: { name: '', frets: [0, 0, 0, 0], fingers: [null, null, null, null], capo: null }
   },
   mandolin: {
     name: 'Mandolin',
     tabStrings: ['E', 'A', 'D', 'G'],
-    defaultChord: { name: 'C', frets: [0, 2, 3, 0], fingers: [null, 1, 2, null], capo: null }
+    defaultChord: { name: '', frets: [0, 0, 0, 0], fingers: [null, null, null, null], capo: null }
   }
 };
 
@@ -568,7 +568,7 @@ export default function App() {
 
   return (
     <div 
-      className="min-h-screen bg-[#f4f3ef] text-stone-900 font-sans flex flex-col items-center pb-20 relative selection:bg-stone-300 print:bg-white"
+      className="min-h-screen bg-[#f4f3ef] text-stone-900 font-sans flex flex-col items-center pb-20 print:pb-0 relative selection:bg-stone-300 print:bg-white"
       style={{ backgroundImage: NOISE_TEXTURE }}
     >
       
@@ -626,7 +626,7 @@ export default function App() {
             <div 
               key={`page-${pageIndex}`} 
               // print:w-[210mm] och print:h-[297mm] tvingar webbläsaren att matcha pappret exakt
-              className="w-full max-w-[900px] bg-[#fdfdfc] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] rounded-sm flex flex-col relative print:shadow-none print:break-after-page border border-stone-200/60 print:border-none print:bg-white print:w-[210mm] print:h-[297mm] print:max-w-none print:overflow-hidden print:m-0"
+              className={`w-full max-w-[900px] bg-[#fdfdfc] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] rounded-sm flex flex-col relative print:shadow-none border border-stone-200/60 print:border-none print:bg-white print:w-[210mm] print:h-[297mm] print:max-w-none print:overflow-hidden print:m-0 ${pageIndex < globalPages.length - 1 ? 'print:break-after-page' : ''}`}
               style={{ 
                 backgroundImage: PAPER_TEXTURE,
                 minHeight: '1122px' // Exakt en A4-höjd vid 96 DPI (visuellt på skärmen)
@@ -640,7 +640,7 @@ export default function App() {
               )}
 
               {isFirstPageOfSection && (
-                <div className={`px-10 ${isFirstPageOfDoc ? 'pt-10 pb-8 print:pt-14 print:pb-4' : 'pt-8 pb-3 print:pt-6 print:pb-2'} border-b-[3px] border-stone-900 mx-8 mt-4 relative`}>
+                <div className={`px-10 print:px-6 ${isFirstPageOfDoc ? 'pt-10 pb-8 print:pt-14 print:pb-4' : 'pt-8 pb-3 print:pt-6 print:pb-2'} border-b-2 border-stone-900 mx-8 print:mx-4 mt-4 relative`}>
                   
                   {isFirstPageOfDoc ? (
                     <div className="w-full flex justify-between items-start relative">
@@ -886,7 +886,14 @@ export default function App() {
                           )
                         }
                       >
-                        <div className="flex-1 flex py-2 min-h-[85px]">
+                        <div className="flex-1 flex py-2 min-h-[85px] relative">
+                          <div className="absolute right-full mr-2 top-2 bottom-2 flex flex-col pointer-events-none z-20 w-4">
+                            {FRETTED_INSTRUMENTS[frettedType].tabStrings.map(str => (
+                              <div key={`header-str-${str}`} className="flex-1 flex items-center justify-end">
+                                <span className="text-[8px] text-teal-700 font-bold bg-white/90 border border-teal-200 px-0.5 py-[1px] rounded-sm leading-none shadow-sm">{str}</span>
+                              </div>
+                            ))}
+                          </div>
                           {systemSteps.filter(s => s % stepsPerMeasure === 0).map(measureStart => {
                             const s1 = measureStart;
                             const s2 = measureStart + 4;
@@ -932,7 +939,6 @@ export default function App() {
                                       {activeInstrument.tabStrings.map(str => (
                                         <div key={`gtab-${str}-${baseStep}`} className="flex flex-1 relative">
                                           <div className="absolute top-1/2 left-0 w-full h-[1.5px] bg-stone-400 pointer-events-none" />
-                                          <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 text-[8px] text-teal-700 font-bold pointer-events-none bg-white/90 border border-teal-200 px-0.5 py-[1px] rounded-sm z-20 leading-none shadow-sm">{str}</div>
                                           
                                           {[0,1,2,3].map(offset => {
                                             const s = baseStep + offset;
