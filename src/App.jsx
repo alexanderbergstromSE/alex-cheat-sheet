@@ -353,7 +353,7 @@ const AppLogo = ({ isPrint = false }) => (
     </div>
     <div className="flex flex-col justify-center pt-0.5 shrink-0">
       <h1 className="text-base font-black tracking-tighter text-stone-900 flex items-baseline gap-1 leading-none whitespace-nowrap">
-        ALEX <span className="font-bold text-stone-500 tracking-tight text-[12px]">CHEAT SHEET</span>
+        MUSIC <span className="font-bold text-stone-500 tracking-tight text-[12px]">CHEAT SHEET</span>
       </h1>
       <span className="text-[6px] font-bold uppercase tracking-widest text-stone-400 mt-0.5 ml-0.5 whitespace-nowrap">Instrumentstämmor & Form</span>
     </div>
@@ -1119,6 +1119,11 @@ export default function App() {
           </div>
         )}
 
+      </div>
+
+      {/* --- FOOTER CREDIT --- */}
+      <div className="text-center pb-4 pt-2 mt-auto text-[10px] font-bold text-stone-500/50 uppercase tracking-widest print:hidden w-full select-none">
+        Developed for Kunskapsskolan by Alexander Bergström.
       </div>
 
       {/* --- ACKORD-EDITOR MODAL --- */}
