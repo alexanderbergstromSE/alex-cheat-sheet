@@ -1186,7 +1186,7 @@ export default function App() {
                             
                             {Array.from({length: numStrings}).map((_, i) => <line key={`sl-${i}`} x1={20 + i*gap} y1="25" x2={20 + i*gap} y2="150" stroke="#9ca3af" strokeWidth="1.5" />)}
 
-                            {bf >= 4 && <text x="16" y="25" fontSize="9" fill="#4b5563" fontWeight="bold" textAnchor="end" dominantBaseline="central">{bf}</text>}
+                            {bf >= 4 && <text x="15" y="25" fontSize="9" fill="#4b5563" fontWeight="bold" textAnchor="end" dominantBaseline="central">{bf}</text>}
 
                             {chordModal.data.capo && chordModal.data.capo > 0 && chordModal.data.capo <= 9 && (
                               <g>
