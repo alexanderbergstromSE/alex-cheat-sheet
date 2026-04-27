@@ -10,11 +10,12 @@ import {
   Eye,
   Edit3,
   Printer,
-  Music
+  Music,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
 
 // --- Texturer för Pro-utseende ---
-const NOISE_TEXTURE = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E")`;
 const PAPER_TEXTURE = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E")`;
 
 // --- Kärndata & Ordböcker ---
@@ -348,6 +349,7 @@ const AppLogo = ({ isPrint = false }) => (
 
 export default function App() {
   const [isEditMode, setIsEditMode] = useState(true);
+  const [zoom, setZoom] = useState(100);
   
   const [songTitle, setSongTitle] = useState("Ny Låt");
   const [artist, setArtist] = useState("Artist / Kompositör");
@@ -569,7 +571,6 @@ export default function App() {
   return (
     <div 
       className="min-h-screen bg-stone-800 text-stone-900 font-sans flex flex-col items-center pb-20 print:pb-0 relative selection:bg-stone-300 print:bg-white"
-      style={{ backgroundImage: NOISE_TEXTURE }}
     >
       
       {/* Tvingar webbläsaren att utgå från marginalfria A4-sidor i PDF-läge */}
@@ -577,6 +578,7 @@ export default function App() {
         {`
           @page { size: A4 portrait; margin: 0; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .print-no-zoom { zoom: 1 !important; transform: none !important; }
         `}
       </style>
 
@@ -610,6 +612,26 @@ export default function App() {
               <Printer size={14} /> Skriv ut PDF
             </button>
           </div>
+
+          {/* ZOOM KONTROLLER */}
+          <div className="flex items-center gap-1 bg-stone-800 px-1 py-1 rounded-lg border border-stone-700 shadow-inner">
+            <button 
+              onClick={() => setZoom(z => Math.max(50, z - 10))}
+              className="p-1.5 text-stone-400 hover:text-stone-200 hover:bg-stone-700 rounded transition-colors"
+              title="Zooma ut"
+            >
+              <ZoomOut size={14} />
+            </button>
+            <span className="text-xs font-bold text-stone-300 w-11 text-center select-none">{zoom}%</span>
+            <button 
+              onClick={() => setZoom(z => Math.min(200, z + 10))}
+              className="p-1.5 text-stone-400 hover:text-stone-200 hover:bg-stone-700 rounded transition-colors"
+              title="Zooma in"
+            >
+              <ZoomIn size={14} />
+            </button>
+          </div>
+
           <div className="flex items-center gap-2 bg-stone-800 px-3 py-2 rounded-lg border border-stone-700 shadow-inner">
             <span className="text-xs font-bold text-stone-400 w-24 text-center">{totalMeasuresAll} Takter Totalt</span>
           </div>
@@ -617,7 +639,10 @@ export default function App() {
       </header>
 
       {/* --- DOKUMENT-YTA (Sidor) --- */}
-      <div className="w-full flex flex-col items-center gap-12 mt-12 print:mt-0 print:gap-0">
+      <div 
+        className="w-full flex flex-col items-center gap-12 mt-12 print:mt-0 print:gap-0 print-no-zoom transition-all"
+        style={{ zoom: `${zoom}%` }}
+      >
         {globalPages.map((page, pageIndex) => {
           const { section, isFirstPageOfSection, isLastPageOfSection, systems } = page;
           const isFirstPageOfDoc = pageIndex === 0;
@@ -626,7 +651,7 @@ export default function App() {
             <div 
               key={`page-${pageIndex}`} 
               // print:w-[210mm] och print:h-[297mm] tvingar webbläsaren att matcha pappret exakt
-              className={`w-full max-w-[900px] bg-[#fdfdfc] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)] rounded-sm flex flex-col relative print:shadow-none border border-stone-900/50 print:border-none print:bg-white print:w-[210mm] print:h-[297mm] print:max-w-none print:overflow-hidden print:m-0 ${pageIndex < globalPages.length - 1 ? 'print:break-after-page' : ''}`}
+              className={`w-full max-w-[900px] bg-[#fdfdfc] shadow-[0_30px_100px_rgba(0,0,0,0.6),0_15px_30px_rgba(0,0,0,0.4)] rounded-sm flex flex-col relative print:shadow-none border border-stone-900/50 print:border-none print:bg-white print:w-[210mm] print:h-[297mm] print:max-w-none print:overflow-hidden print:m-0 ${pageIndex < globalPages.length - 1 ? 'print:break-after-page' : ''}`}
               style={{ 
                 backgroundImage: PAPER_TEXTURE,
                 minHeight: '1122px' // Exakt en A4-höjd vid 96 DPI (visuellt på skärmen)
