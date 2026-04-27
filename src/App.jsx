@@ -92,6 +92,20 @@ const formatPianoName = (chordData) => {
 
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
+// --- NYTT: Hjälpfunktioner för dynamisk textstorlek ---
+const getTitleSizeClass = (text) => {
+  if (text.length > 26) return 'text-2xl md:text-3xl print:text-2xl';
+  if (text.length > 15) return 'text-3xl md:text-4xl print:text-3xl';
+  return 'text-4xl md:text-5xl print:text-4xl';
+};
+
+const getArtistSizeClass = (text) => {
+  if (text.length > 30) return 'text-sm print:text-sm';
+  if (text.length > 20) return 'text-base print:text-base';
+  return 'text-lg md:text-xl print:text-lg';
+};
+// --------------------------------------------------------
+
 const createNewSection = (isFirst = false) => ({
   id: generateId(),
   formSection: isFirst ? 'Formdel: Intro' : 'Ny Formdel',
@@ -310,6 +324,25 @@ const TrackRowContainer = ({ title, icon: Icon, borderColor, bgHeader, bgContent
   </div>
 );
 
+const AppLogo = ({ isPrint = false }) => (
+  <div className={`flex items-center gap-3 select-none ${isPrint ? 'bg-transparent' : 'bg-white/60 border border-white/80 p-1.5 pr-5 rounded-2xl shadow-sm transition-colors hover:bg-white/80'}`}>
+    <div className="w-10 h-10 rounded-xl bg-stone-900 flex items-center justify-center shadow-inner border border-stone-700 relative overflow-hidden group shrink-0">
+      <div className="absolute inset-0 bg-gradient-to-tr from-stone-800 to-stone-600 opacity-40"></div>
+      <div className="flex items-end gap-[3px] h-[18px] relative z-10 group-hover:scale-110 transition-transform duration-300">
+        <div className="w-1.5 h-2.5 bg-blue-400 rounded-sm"></div>
+        <div className="w-1.5 h-[16px] bg-rose-400 rounded-sm"></div>
+        <div className="w-1.5 h-[18px] bg-teal-400 rounded-sm"></div>
+        <div className="w-1.5 h-3 bg-indigo-400 rounded-sm"></div>
+      </div>
+    </div>
+    <div className="flex flex-col justify-center pt-0.5">
+      <h1 className="text-lg font-black tracking-tighter text-stone-900 flex items-baseline gap-1 leading-none">
+        ALEX <span className="font-bold text-stone-500 tracking-tight text-[15px]">CHEAT SHEET</span>
+      </h1>
+      <span className="text-[7px] font-bold uppercase tracking-widest text-stone-400 mt-0.5 ml-0.5">Instrumentstämmor & Form</span>
+    </div>
+  </div>
+);
 
 // --- Huvudapplikation ---
 
@@ -331,22 +364,11 @@ export default function App() {
   const [dragValue, setDragValue] = useState(true);
   const [dragType, setDragType] = useState(null);
 
-  // Referens för att automatiskt storleksanpassa titelfältet utan krockar
-  const titleRef = useRef(null);
-
   useEffect(() => {
     const handleMouseUp = () => setIsDragging(false);
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
   }, []);
-
-  // Fixar höjden på titeln varje gång den ändras så att den pressar ner artisten rätt
-  useEffect(() => {
-    if (titleRef.current) {
-      titleRef.current.style.height = 'auto'; 
-      titleRef.current.style.height = `${titleRef.current.scrollHeight}px`;
-    }
-  }, [songTitle, isEditMode]);
 
   const stepsPerMeasure = 8; 
   const measuresPerSystem = 4;
@@ -561,23 +583,7 @@ export default function App() {
       {/* --- HEADER --- */}
       <header className="w-full flex flex-wrap items-center justify-between px-6 py-4 bg-[#fcfbf9]/85 backdrop-blur-md border-b border-stone-300/50 shadow-sm z-40 sticky top-0 print:hidden text-stone-800">
         
-        <div className="flex items-center gap-3 bg-white/60 border border-white/80 p-1.5 pr-5 rounded-2xl shadow-sm transition-colors hover:bg-white/80 select-none">
-          <div className="w-10 h-10 rounded-xl bg-stone-900 flex items-center justify-center shadow-inner border border-stone-700 relative overflow-hidden group shrink-0">
-            <div className="absolute inset-0 bg-gradient-to-tr from-stone-800 to-stone-600 opacity-40"></div>
-            <div className="flex items-end gap-[3px] h-[18px] relative z-10 group-hover:scale-110 transition-transform duration-300">
-              <div className="w-1.5 h-2.5 bg-blue-400 rounded-sm"></div>
-              <div className="w-1.5 h-[16px] bg-rose-400 rounded-sm"></div>
-              <div className="w-1.5 h-[18px] bg-teal-400 rounded-sm"></div>
-              <div className="w-1.5 h-3 bg-indigo-400 rounded-sm"></div>
-            </div>
-          </div>
-          <div className="flex flex-col justify-center pt-0.5">
-            <h1 className="text-lg font-black tracking-tighter text-stone-900 flex items-baseline gap-1 leading-none">
-              ALEX <span className="font-bold text-stone-500 tracking-tight text-[15px]">CHEAT SHEET</span>
-            </h1>
-            <span className="text-[7px] font-bold uppercase tracking-widest text-stone-400 mt-0.5 ml-0.5">Instrumentstämmor & Form</span>
-          </div>
-        </div>
+        <AppLogo />
 
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2 bg-stone-50 px-2 py-1.5 rounded-lg border border-stone-200">
@@ -627,8 +633,14 @@ export default function App() {
               }}
             >
               
+              {isFirstPageOfDoc && (
+                <div className="hidden print:flex absolute top-6 left-8 scale-[0.8] origin-top-left z-50 pointer-events-none">
+                  <AppLogo isPrint={true} />
+                </div>
+              )}
+
               {isFirstPageOfSection && (
-                <div className={`px-10 ${isFirstPageOfDoc ? 'pt-10 pb-8 print:pt-6 print:pb-4' : 'pt-8 pb-3 print:pt-6 print:pb-2'} border-b-[3px] border-stone-900 mx-8 mt-4 relative`}>
+                <div className={`px-10 ${isFirstPageOfDoc ? 'pt-10 pb-8 print:pt-14 print:pb-4' : 'pt-8 pb-3 print:pt-6 print:pb-2'} border-b-[3px] border-stone-900 mx-8 mt-4 relative`}>
                   
                   {isFirstPageOfDoc ? (
                     <div className="w-full flex justify-between items-start relative">
@@ -642,15 +654,13 @@ export default function App() {
                         placeholder="Tempo / Tonart..."
                       />
 
-                      {/* Flex-col gap-2 löser krocken. Titeln resizar nu korrekt utan att putta snett */}
                       <div className="flex-1 flex flex-col items-center max-w-[450px] mx-4 gap-2">
-                        <textarea 
-                          ref={titleRef}
+                        <input 
+                          type="text"
                           value={songTitle}
                           onChange={e => setSongTitle(e.target.value)}
                           readOnly={!isEditMode}
-                          rows={1}
-                          className={`text-4xl md:text-5xl font-black bg-transparent border-none outline-none text-stone-900 w-full text-center placeholder-stone-300 transition-all tracking-tighter resize-none overflow-hidden leading-[1.1] ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'}`}
+                          className={`font-black bg-transparent border-none outline-none text-stone-900 w-full text-center placeholder-stone-300 transition-all tracking-tighter leading-[1.1] ${getTitleSizeClass(songTitle)} ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'}`}
                           placeholder="LÅTENS TITEL..."
                         />
                         <input 
@@ -658,7 +668,7 @@ export default function App() {
                           value={artist}
                           onChange={e => setArtist(e.target.value)}
                           readOnly={!isEditMode}
-                          className={`text-lg md:text-xl font-bold bg-transparent border-none outline-none text-stone-500 w-full text-center placeholder-stone-300 transition-all tracking-tight ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'}`}
+                          className={`font-bold bg-transparent border-none outline-none text-stone-500 w-full text-center placeholder-stone-300 transition-all tracking-tight ${getArtistSizeClass(artist)} ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'}`}
                           placeholder="Artist / Kompositör..."
                         />
                       </div>
@@ -696,7 +706,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* Innehåll: Rader. Gap-12 blir gap-6 under print för att tvinga dem att få plats */}
+              {/* Innehåll: Rader. Gap-12 blir gap-4 under print för att tvinga dem att få plats */}
               <div className={`p-8 print:p-4 flex flex-col gap-12 print:gap-4 ${!isFirstPageOfSection ? 'pt-16 print:pt-6' : ''}`}>
                 {systems.map((system, systemIndex) => {
                   const startStep = system.startMeasure * stepsPerMeasure;
