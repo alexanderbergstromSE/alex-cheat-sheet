@@ -161,15 +161,27 @@ const MiniPiano = ({ activeKeys }) => {
 
   return (
     <svg viewBox="0 0 84 24" className="w-full h-full max-h-[32px] drop-shadow-sm">
-      {keys.filter(k => k.type === 'white').map((k) => (
-        <rect key={`w-${k.index}`} x={k.x} y="0" width="6" height="24" rx="1"
-              fill={activeKeys.includes(k.index) ? '#c7d2fe' : '#ffffff'}
-              stroke="#9ca3af" strokeWidth="0.5" />
-      ))}
-      {keys.filter(k => k.type === 'black').map((k) => (
-        <rect key={`b-${k.index}`} x={k.x} y="0" width="4" height="14" rx="0.5"
-              fill={activeKeys.includes(k.index) ? '#4f46e5' : '#374151'} />
-      ))}
+      {keys.filter(k => k.type === 'white').map((k) => {
+        const isActive = activeKeys.includes(k.index);
+        return (
+          <g key={`w-${k.index}`}>
+            <rect x={k.x} y="0" width="6" height="24" rx="1"
+                  fill={isActive ? '#c7d2fe' : '#ffffff'}
+                  stroke="#9ca3af" strokeWidth="0.5" />
+            {isActive && <circle cx={k.x + 3} cy="19" r="1.5" fill="#3730a3" />}
+          </g>
+        );
+      })}
+      {keys.filter(k => k.type === 'black').map((k) => {
+        const isActive = activeKeys.includes(k.index);
+        return (
+          <g key={`b-${k.index}`}>
+            <rect x={k.x} y="0" width="4" height="14" rx="0.5"
+                  fill={isActive ? '#4f46e5' : '#374151'} />
+            {isActive && <circle cx={k.x + 2} cy="10.5" r="1" fill="#ffffff" />}
+          </g>
+        );
+      })}
     </svg>
   );
 };
@@ -326,21 +338,21 @@ const TrackRowContainer = ({ title, icon: Icon, borderColor, bgHeader, bgContent
 );
 
 const AppLogo = ({ isPrint = false }) => (
-  <div className={`flex items-center gap-3 select-none ${isPrint ? 'bg-transparent' : 'bg-stone-100 border border-white p-1.5 pr-5 rounded-2xl shadow-sm transition-colors hover:bg-white'}`}>
-    <div className="w-10 h-10 rounded-xl bg-stone-900 flex items-center justify-center shadow-inner border border-stone-700 relative overflow-hidden group shrink-0">
+  <div className={`flex items-center gap-2.5 select-none shrink-0 ${isPrint ? 'bg-transparent' : 'bg-stone-100 border border-stone-200 p-1 pr-4 rounded-xl shadow-sm transition-colors hover:bg-white'}`}>
+    <div className="w-8 h-8 rounded-lg bg-stone-900 flex items-center justify-center shadow-inner border border-stone-700 relative overflow-hidden group shrink-0">
       <div className="absolute inset-0 bg-gradient-to-tr from-stone-800 to-stone-600 opacity-40"></div>
-      <div className="flex items-end gap-[3px] h-[18px] relative z-10 group-hover:scale-110 transition-transform duration-300">
-        <div className="w-1.5 h-2.5 bg-blue-400 rounded-sm"></div>
-        <div className="w-1.5 h-[16px] bg-rose-400 rounded-sm"></div>
-        <div className="w-1.5 h-[18px] bg-teal-400 rounded-sm"></div>
-        <div className="w-1.5 h-3 bg-indigo-400 rounded-sm"></div>
+      <div className="flex items-end gap-[2px] h-[14px] relative z-10 group-hover:scale-110 transition-transform duration-300">
+        <div className="w-1 h-2 bg-blue-400 rounded-sm"></div>
+        <div className="w-1 h-[12px] bg-rose-400 rounded-sm"></div>
+        <div className="w-1 h-[14px] bg-teal-400 rounded-sm"></div>
+        <div className="w-1 h-2.5 bg-indigo-400 rounded-sm"></div>
       </div>
     </div>
-    <div className="flex flex-col justify-center pt-0.5">
-      <h1 className="text-lg font-black tracking-tighter text-stone-900 flex items-baseline gap-1 leading-none">
-        ALEX <span className="font-bold text-stone-500 tracking-tight text-[15px]">CHEAT SHEET</span>
+    <div className="flex flex-col justify-center pt-0.5 shrink-0">
+      <h1 className="text-base font-black tracking-tighter text-stone-900 flex items-baseline gap-1 leading-none whitespace-nowrap">
+        ALEX <span className="font-bold text-stone-500 tracking-tight text-[12px]">CHEAT SHEET</span>
       </h1>
-      <span className="text-[7px] font-bold uppercase tracking-widest text-stone-400 mt-0.5 ml-0.5">Instrumentstämmor & Form</span>
+      <span className="text-[6px] font-bold uppercase tracking-widest text-stone-400 mt-0.5 ml-0.5 whitespace-nowrap">Instrumentstämmor & Form</span>
     </div>
   </div>
 );
@@ -659,7 +671,7 @@ export default function App() {
             >
               
               {isFirstPageOfDoc && (
-                <div className="hidden print:flex absolute top-6 left-8 scale-[0.8] origin-top-left z-50 pointer-events-none">
+                <div className="hidden print:flex absolute top-5 print:left-4 scale-[0.8] origin-top-left z-50 pointer-events-none">
                   <AppLogo isPrint={true} />
                 </div>
               )}
