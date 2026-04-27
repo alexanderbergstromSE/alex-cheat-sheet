@@ -36,17 +36,17 @@ const FRETTED_INSTRUMENTS = {
   guitar: {
     name: 'Gitarr',
     tabStrings: ['e', 'B', 'G', 'D', 'A', 'E'],
-    defaultChord: { name: '', frets: [0, 0, 0, 0, 0, 0], fingers: [null, null, null, null, null, null], capo: null }
+    defaultChord: { name: '', frets: [0, 0, 0, 0, 0, 0], fingers: [null, null, null, null, null, null], capo: null, baseFret: 1 }
   },
   ukulele: {
     name: 'Ukulele',
     tabStrings: ['A', 'E', 'C', 'G'],
-    defaultChord: { name: '', frets: [0, 0, 0, 0], fingers: [null, null, null, null], capo: null }
+    defaultChord: { name: '', frets: [0, 0, 0, 0], fingers: [null, null, null, null], capo: null, baseFret: 1 }
   },
   mandolin: {
     name: 'Mandolin',
     tabStrings: ['E', 'A', 'D', 'G'],
-    defaultChord: { name: '', frets: [0, 0, 0, 0], fingers: [null, null, null, null], capo: null }
+    defaultChord: { name: '', frets: [0, 0, 0, 0], fingers: [null, null, null, null], capo: null, baseFret: 1 }
   }
 };
 
@@ -109,8 +109,8 @@ const getArtistSizeClass = (text) => {
 
 const createNewSection = (isFirst = false) => ({
   id: generateId(),
-  formSection: isFirst ? 'Formdel: Intro' : 'Ny Formdel',
-  tempoKey: isFirst ? 'BPM: 120 | Tonart: C' : '',
+  formSection: '',
+  tempoKey: '',
   measures: 4,
   drumState: { kick: {}, snare: {}, hihat: {} },
   drumRepeats: {},
@@ -186,9 +186,10 @@ const MiniPiano = ({ activeKeys }) => {
   );
 };
 
-const MiniFrettedChord = ({ frets, fingers = [], capo = null, strings = 6 }) => {
+const MiniFrettedChord = ({ frets, fingers = [], capo = null, strings = 6, baseFret = 1 }) => {
   if (!frets) return null;
   
+  const bf = baseFret || 1;
   const numStrings = strings;
   const gap = 26 / (numStrings - 1); 
 
@@ -196,7 +197,7 @@ const MiniFrettedChord = ({ frets, fingers = [], capo = null, strings = 6 }) => 
   let barreMinStr = numStrings, barreMaxStr = -1;
   const minStringsForBarre = numStrings >= 5 ? 4 : 3;
 
-  for (let f = 1; f <= 5; f++) {
+  for (let f = bf; f <= bf + 4; f++) {
     let count = 0;
     let minS = numStrings, maxS = -1;
     for (let s = 0; s < numStrings; s++) {
@@ -218,8 +219,10 @@ const MiniFrettedChord = ({ frets, fingers = [], capo = null, strings = 6 }) => 
     <svg viewBox="0 0 40 46" className="w-full h-full max-h-[80px] drop-shadow-sm">
       <rect width="40" height="46" fill="#ffffff" stroke="#d1d5db" strokeWidth="1" rx="4" />
       {Array.from({length: numStrings}).map((_, i) => <line key={`v-${i}`} x1={7 + i*gap} y1="10" x2={7 + i*gap} y2="40" stroke="#9ca3af" strokeWidth="1" />)}
-      {[0,1,2,3,4].map(i => <line key={`h-${i}`} x1="7" y1={10 + i*7.5} x2="33" y2={10 + i*7.5} stroke="#9ca3af" strokeWidth={i===0 ? "2" : "1"} />)}
+      {[0,1,2,3,4].map(i => <line key={`h-${i}`} x1="7" y1={10 + i*7.5} x2="33" y2={10 + i*7.5} stroke="#9ca3af" strokeWidth={i===0 && bf === 1 ? "2" : "1"} />)}
       
+      {bf > 1 && <text x="5.5" y={10 + 3.75} fontSize="4" fill="#4b5563" fontWeight="bold" textAnchor="end">{bf}</text>}
+
       {capo && capo > 0 && capo <= 9 && (
         <g>
           <rect x={3} y={8.5} width={34} height={3} fill="#4b5563" rx="1.5" />
@@ -230,11 +233,11 @@ const MiniFrettedChord = ({ frets, fingers = [], capo = null, strings = 6 }) => 
       {autoBarreFret && (
         <g>
           <line 
-            x1={7 + barreMinStr * gap} y1={10 + (autoBarreFret - 0.5)*7.5} 
-            x2={7 + barreMaxStr * gap} y2={10 + (autoBarreFret - 0.5)*7.5} 
+            x1={7 + barreMinStr * gap} y1={10 + (autoBarreFret - bf + 0.5)*7.5} 
+            x2={7 + barreMaxStr * gap} y2={10 + (autoBarreFret - bf + 0.5)*7.5} 
             stroke="#0d9488" strokeWidth="4.6" strokeLinecap="round" 
           />
-          <text x={7 + barreMinStr * gap} y={10 + (autoBarreFret - 0.5)*7.5 + 1} fontSize="3.5" fill="white" textAnchor="middle" dominantBaseline="middle" fontWeight="bold">1</text>
+          <text x={7 + barreMinStr * gap} y={10 + (autoBarreFret - bf + 0.5)*7.5 + 1} fontSize="3.5" fill="white" textAnchor="middle" dominantBaseline="middle" fontWeight="bold">1</text>
         </g>
       )}
 
@@ -245,9 +248,10 @@ const MiniFrettedChord = ({ frets, fingers = [], capo = null, strings = 6 }) => 
         if (fret === -1) return <text key={`f-${stringIndex}`} x={x} y="4.5" fontSize="5" fill="#ef4444" textAnchor="middle" fontWeight="bold">X</text>;
         if (fret === 0) return <circle key={`f-${stringIndex}`} cx={x} cy="3" r="1.5" fill="none" stroke="#0d9488" strokeWidth="1" />;
         
+        if (fret < bf || fret > bf + 4) return null;
         if (fret === autoBarreFret && finger === 1) return null; 
         
-        const y = 10 + (fret - 0.5)*7.5;
+        const y = 10 + (fret - bf + 0.5)*7.5;
         return (
           <g key={`f-${stringIndex}`}>
             <circle cx={x} cy={y} r="2.3" fill="#0d9488" />
@@ -969,7 +973,7 @@ export default function App() {
                                       >
                                         {chordData ? chordData.name : (isEditMode ? '+ Ackord' : '')}
                                       </button>
-                                      {chordData && <div className="w-full max-w-[76px] pointer-events-none mt-0.5"><MiniFrettedChord frets={chordData.frets} fingers={chordData.fingers} capo={chordData.capo} strings={activeInstrument.tabStrings.length} /></div>}
+                                      {chordData && <div className="w-full max-w-[76px] pointer-events-none mt-0.5"><MiniFrettedChord frets={chordData.frets} fingers={chordData.fingers} capo={chordData.capo} strings={activeInstrument.tabStrings.length} baseFret={chordData.baseFret} /></div>}
                                     </div>
                                   ) : (
                                     <div className="flex-1 flex flex-col w-full">
@@ -1150,13 +1154,13 @@ export default function App() {
                     <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-3">Greppbräda</span>
                     <div className="relative">
                       {(() => {
+                        const bf = chordModal.data.baseFret || 1;
                         const numStrings = chordModal.data.frets.length;
                         const gap = 80 / (numStrings - 1); 
-                        const minStringsForBarre = numStrings >= 5 ? 4 : 3;
 
                         let autoBarreFret = null;
                         let barreMinStr = numStrings, barreMaxStr = -1;
-                        for (let f = 1; f <= 5; f++) {
+                        for (let f = bf; f <= bf + 4; f++) {
                           let count = 0;
                           let minS = numStrings, maxS = -1;
                           for (let s = 0; s < numStrings; s++) {
@@ -1166,7 +1170,7 @@ export default function App() {
                               if (s > maxS) maxS = s;
                             }
                           }
-                          if (count >= minStringsForBarre) {
+                          if (count >= 2) {
                             autoBarreFret = f;
                             barreMinStr = minS;
                             barreMaxStr = maxS;
@@ -1178,10 +1182,12 @@ export default function App() {
                           <svg viewBox="0 0 120 160" className="w-[150px] drop-shadow-md">
                             <rect x="0" y="0" width="120" height="160" fill="#ffffff" rx="4" stroke="#d1d5db" />
                             
-                            <line x1="20" y1="25" x2="100" y2="25" stroke="#4b5563" strokeWidth="4" />
+                            <line x1="20" y1="25" x2="100" y2="25" stroke="#4b5563" strokeWidth={bf === 1 ? "4" : "1"} />
                             {[1,2,3,4,5].map(i => <line key={`fl-${i}`} x1="20" y1={25 + i*25} x2="100" y2={25 + i*25} stroke="#9ca3af" strokeWidth="1" />)}
                             
                             {Array.from({length: numStrings}).map((_, i) => <line key={`sl-${i}`} x1={20 + i*gap} y1="25" x2={20 + i*gap} y2="150" stroke="#9ca3af" strokeWidth="1.5" />)}
+
+                            {bf >= 4 && <text x="16" y="31" fontSize="8" fill="#4b5563" fontWeight="bold" textAnchor="end">{bf}</text>}
 
                             {chordModal.data.capo && chordModal.data.capo > 0 && chordModal.data.capo <= 9 && (
                               <g>
@@ -1194,12 +1200,12 @@ export default function App() {
                               <g>
                                 <line 
                                   x1={20 + barreMinStr * gap} 
-                                  y1={25 + (autoBarreFret - 0.5) * 25} 
+                                  y1={25 + (autoBarreFret - bf + 0.5) * 25} 
                                   x2={20 + barreMaxStr * gap} 
-                                  y2={25 + (autoBarreFret - 0.5) * 25} 
+                                  y2={25 + (autoBarreFret - bf + 0.5) * 25} 
                                   stroke="#0d9488" strokeWidth="14" strokeLinecap="round" opacity="1" 
                                 />
-                                <text x={20 + barreMinStr * gap} y={25 + (autoBarreFret - 0.5) * 25} fontSize="9" fill="white" textAnchor="middle" dominantBaseline="middle" fontWeight="bold">1</text>
+                                <text x={20 + barreMinStr * gap} y={25 + (autoBarreFret - bf + 0.5) * 25} fontSize="9" fill="white" textAnchor="middle" dominantBaseline="middle" fontWeight="bold">1</text>
                               </g>
                             )}
 
@@ -1209,9 +1215,10 @@ export default function App() {
                               if (fret === -1) return <text key={`ed-f-${sIdx}`} x={x} y="11" fontSize="12" fill="#ef4444" textAnchor="middle" fontWeight="bold">X</text>;
                               if (fret === 0) return <circle key={`ed-f-${sIdx}`} cx={x} cy="7.5" r="4" fill="none" stroke="#0d9488" strokeWidth="2" />;
                               
+                              if (fret < bf || fret > bf + 4) return null;
                               if (fret === autoBarreFret && finger === 1) return null; 
                               
-                              const y = 25 + (fret - 0.5) * 25;
+                              const y = 25 + (fret - bf + 0.5) * 25;
                               return (
                                 <g key={`ed-f-${sIdx}`}>
                                   <circle cx={x} cy={y} r="7" fill="#0d9488" />
@@ -1230,9 +1237,10 @@ export default function App() {
                                 }}
                               />
                             ))}
-                            {[1,2,3,4,5].map(f =>
-                              Array.from({length: numStrings}).map((_, s) => (
-                                <rect key={`cz-f-${s}-${f}`} x={20 + s*gap - (gap/2)} y={25 + (f-1)*25} width={gap} height="25" fill="transparent" cursor="pointer"
+                            {[0,1,2,3,4].map(r => {
+                              const f = bf + r;
+                              return Array.from({length: numStrings}).map((_, s) => (
+                                <rect key={`cz-f-${s}-${f}`} x={20 + s*gap - (gap/2)} y={25 + r*25} width={gap} height="25" fill="transparent" cursor="pointer"
                                   onClick={() => {
                                     const newData = { ...chordModal.data, frets: [...chordModal.data.frets], fingers: [...chordModal.data.fingers] };
                                     const availableFingers = [1, 2, 3, 4].filter(n => 
@@ -1260,27 +1268,39 @@ export default function App() {
                                     setChordModal(prev => ({...prev, data: newData}));
                                   }}
                                 />
-                              ))
-                            )}
+                              ));
+                            })}
                           </svg>
                         );
                       })()}
                     </div>
                     <p className="text-[9px] text-center text-stone-500 mt-3 leading-relaxed max-w-[220px]">
-                      Klicka på strängarna för att placera grepp. Klicka igen för att byta finger. <br/>Sätt 3 eller 4 strängar på samma band med finger 1 för barré.
+                      Klicka på strängarna för att placera grepp. Klicka igen för att byta finger. <br/>Sätt 2 eller fler strängar på samma band med finger 1 för barré.
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Capo:</span>
-                    <select
-                      value={chordModal.data.capo || ''}
-                      onChange={(e) => setChordModal(prev => ({...prev, data: {...prev.data, capo: e.target.value ? parseInt(e.target.value) : null}}))}
-                      className="flex-1 bg-white border border-stone-300 rounded px-2 py-1.5 text-sm font-bold text-stone-700 outline-none focus:ring-2 focus:ring-teal-500 shadow-sm"
-                    >
-                      <option value="">Inget Capo</option>
-                      {[1,2,3,4,5,6,7,8,9].map(b => <option key={`capo-${b}`} value={b}>Band {b}</option>)}
-                    </select>
+                  <div className="flex gap-3">
+                    <div className="flex-1 flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Capo:</span>
+                      <select
+                        value={chordModal.data.capo || ''}
+                        onChange={(e) => setChordModal(prev => ({...prev, data: {...prev.data, capo: e.target.value ? parseInt(e.target.value) : null}}))}
+                        className="flex-1 bg-white border border-stone-300 rounded px-2 py-1.5 text-sm font-bold text-stone-700 outline-none focus:ring-2 focus:ring-teal-500 shadow-sm"
+                      >
+                        <option value="">Inget</option>
+                        {[1,2,3,4,5,6,7,8,9].map(b => <option key={`capo-${b}`} value={b}>Band {b}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex-1 flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Start:</span>
+                      <select
+                        value={chordModal.data.baseFret || 1}
+                        onChange={(e) => setChordModal(prev => ({...prev, data: {...prev.data, baseFret: parseInt(e.target.value)}}))}
+                        className="flex-1 bg-white border border-stone-300 rounded px-2 py-1.5 text-sm font-bold text-stone-700 outline-none focus:ring-2 focus:ring-teal-500 shadow-sm"
+                      >
+                        {Array.from({length: 12}, (_, i) => i + 1).map(b => <option key={`bf-${b}`} value={b}>Band {b}</option>)}
+                      </select>
+                    </div>
                   </div>
                 </div>
               ) : (
