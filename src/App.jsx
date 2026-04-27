@@ -220,7 +220,7 @@ const MiniFrettedChord = ({ frets, fingers = [], capo = null, strings = 6, baseF
       {Array.from({length: numStrings}).map((_, i) => <line key={`v-${i}`} x1={7 + i*gap} y1="10" x2={7 + i*gap} y2="40" stroke="#9ca3af" strokeWidth="1" />)}
       {[0,1,2,3,4].map(i => <line key={`h-${i}`} x1="7" y1={10 + i*7.5} x2="33" y2={10 + i*7.5} stroke="#9ca3af" strokeWidth={i===0 && bf === 1 ? "2" : "1"} />)}
       
-      {bf > 1 && <text x="5.5" y={10 + 3.75} fontSize="4" fill="#4b5563" fontWeight="bold" textAnchor="end">{bf}</text>}
+      {bf >= 4 && <text x="5.5" y="10" fontSize="3.2" fill="#4b5563" fontWeight="bold" textAnchor="end" dominantBaseline="central">{bf}</text>}
 
       {capo && capo > 0 && capo <= 9 && (
         <g>
@@ -380,9 +380,13 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragValue, setDragValue] = useState(true);
   const [dragType, setDragType] = useState(null);
+  const dragRef = useRef({ isDragging: false, fret: null, startStr: null, applied: false, action: 'add' });
 
   useEffect(() => {
-    const handleMouseUp = () => setIsDragging(false);
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      if (dragRef.current) dragRef.current.isDragging = false;
+    };
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
   }, []);
@@ -944,7 +948,7 @@ export default function App() {
 
                             const isPresentation = !isEditMode;
                             const bothChordsMode = mode1 === 'chord' && mode2 === 'chord';
-                            const shouldMerge = isPresentation && bothChordsMode && (!chord1 || !chord2);
+                            const scheduleMerge = isPresentation && bothChordsMode && (!chord1 || !chord2);
 
                             const renderBlock = (baseStep, isMerged) => {
                               const mode = section.frettedModes[baseStep] || frettedMode;
@@ -1003,7 +1007,7 @@ export default function App() {
 
                             return (
                               <div key={`m-g-${measureStart}`} className="flex-1 flex relative">
-                                {shouldMerge ? renderBlock(measureStart, true) : (
+                                {scheduleMerge ? renderBlock(measureStart, true) : (
                                   <>
                                     {renderBlock(s1, false)}
                                     {renderBlock(s2, false)}
@@ -1157,23 +1161,21 @@ export default function App() {
                         const numStrings = chordModal.data.frets.length;
                         const gap = 80 / (numStrings - 1); 
 
-                        let autoBarreFret = null;
-                        let barreMinStr = numStrings, barreMaxStr = -1;
+                        const barres = [];
                         for (let f = bf; f <= bf + 4; f++) {
-                          let count = 0;
-                          let minS = numStrings, maxS = -1;
-                          for (let s = 0; s < numStrings; s++) {
-                            if (chordModal.data.frets[s] === f && chordModal.data.fingers[s] === 1) {
-                              count++;
-                              if (s < minS) minS = s;
-                              if (s > maxS) maxS = s;
+                          for (let finger = 1; finger <= 4; finger++) {
+                            let count = 0;
+                            let minS = numStrings, maxS = -1;
+                            for (let s = 0; s < numStrings; s++) {
+                              if (chordModal.data.frets[s] === f && chordModal.data.fingers[s] === finger) {
+                                count++;
+                                if (s < minS) minS = s;
+                                if (s > maxS) maxS = s;
+                              }
                             }
-                          }
-                          if (count >= 2) {
-                            autoBarreFret = f;
-                            barreMinStr = minS;
-                            barreMaxStr = maxS;
-                            break;
+                            if (count >= 2) {
+                              barres.push({ fret: f, finger, minStr: minS, maxStr: maxS });
+                            }
                           }
                         }
 
@@ -1195,18 +1197,18 @@ export default function App() {
                               </g>
                             )}
 
-                            {autoBarreFret && (
-                              <g>
+                            {barres.map((barre, idx) => (
+                              <g key={`ed-barre-${idx}`}>
                                 <line 
-                                  x1={20 + barreMinStr * gap} 
-                                  y1={25 + (autoBarreFret - bf + 0.5) * 25} 
-                                  x2={20 + barreMaxStr * gap} 
-                                  y2={25 + (autoBarreFret - bf + 0.5) * 25} 
+                                  x1={20 + barre.minStr * gap} 
+                                  y1={25 + (barre.fret - bf + 0.5) * 25} 
+                                  x2={20 + barre.maxStr * gap} 
+                                  y2={25 + (barre.fret - bf + 0.5) * 25} 
                                   stroke="#0d9488" strokeWidth="14" strokeLinecap="round" opacity="1" 
                                 />
-                                <text x={20 + barreMinStr * gap} y={25 + (autoBarreFret - bf + 0.5) * 25} fontSize="9" fill="white" textAnchor="middle" dominantBaseline="middle" fontWeight="bold">1</text>
+                                <text x={20 + barre.minStr * gap} y={25 + (barre.fret - bf + 0.5) * 25} fontSize="9" fill="white" textAnchor="middle" dominantBaseline="middle" fontWeight="bold">{barre.finger}</text>
                               </g>
-                            )}
+                            ))}
 
                             {chordModal.data.frets.map((fret, sIdx) => {
                               const x = 20 + sIdx * gap;
@@ -1215,7 +1217,7 @@ export default function App() {
                               if (fret === 0) return <circle key={`ed-f-${sIdx}`} cx={x} cy="7.5" r="4" fill="none" stroke="#0d9488" strokeWidth="2" />;
                               
                               if (fret < bf || fret > bf + 4) return null;
-                              if (fret === autoBarreFret && finger === 1) return null; 
+                              if (barres.some(b => b.fret === fret && b.finger === finger)) return null; 
                               
                               const y = 25 + (fret - bf + 0.5) * 25;
                               return (
@@ -1228,7 +1230,25 @@ export default function App() {
 
                             {Array.from({length: numStrings}).map((_, s) => (
                               <rect key={`cz-nut-${s}`} x={20 + s*gap - (gap/2)} y="0" width={gap} height="20" fill="transparent" cursor="pointer"
+                                onMouseDown={() => {
+                                  dragRef.current = { isDragging: true, fret: 0, startStr: s, applied: false, action: chordModal.data.frets[s] === 0 ? 'remove' : 'add', fingerToUse: null };
+                                }}
+                                onMouseEnter={() => {
+                                  if (dragRef.current.isDragging && dragRef.current.fret === 0) {
+                                    const newData = { ...chordModal.data, frets: [...chordModal.data.frets], fingers: [...chordModal.data.fingers] };
+                                    const action = dragRef.current.action;
+                                    if (!dragRef.current.applied) {
+                                      dragRef.current.applied = true;
+                                      newData.frets[dragRef.current.startStr] = action === 'add' ? 0 : -1;
+                                      newData.fingers[dragRef.current.startStr] = null;
+                                    }
+                                    newData.frets[s] = action === 'add' ? 0 : -1;
+                                    newData.fingers[s] = null;
+                                    setChordModal(prev => ({...prev, data: newData}));
+                                  }
+                                }}
                                 onClick={() => {
+                                  if (dragRef.current.applied) return;
                                   const newData = { ...chordModal.data, frets: [...chordModal.data.frets], fingers: [...chordModal.data.fingers] };
                                   newData.frets[s] = newData.frets[s] === 0 ? -1 : 0;
                                   newData.fingers[s] = null;
@@ -1240,7 +1260,34 @@ export default function App() {
                               const f = bf + r;
                               return Array.from({length: numStrings}).map((_, s) => (
                                 <rect key={`cz-f-${s}-${f}`} x={20 + s*gap - (gap/2)} y={25 + r*25} width={gap} height="25" fill="transparent" cursor="pointer"
+                                  onMouseDown={() => {
+                                    const isRemoving = chordModal.data.frets[s] === f;
+                                    const action = isRemoving ? 'remove' : 'add';
+                                    let fingerToUse = null;
+                                    if (action === 'add') {
+                                      const availableFingers = [1, 2, 3, 4].filter(n => 
+                                        !chordModal.data.fingers.some((fn, i) => fn === n && chordModal.data.frets[i] !== f)
+                                      );
+                                      fingerToUse = availableFingers.length > 0 ? availableFingers[0] : null;
+                                    }
+                                    dragRef.current = { isDragging: true, fret: f, startStr: s, applied: false, action, fingerToUse };
+                                  }}
+                                  onMouseEnter={() => {
+                                    if (dragRef.current.isDragging && dragRef.current.fret === f) {
+                                      const newData = { ...chordModal.data, frets: [...chordModal.data.frets], fingers: [...chordModal.data.fingers] };
+                                      const { action, startStr, fingerToUse } = dragRef.current;
+                                      if (!dragRef.current.applied) {
+                                        dragRef.current.applied = true;
+                                        newData.frets[startStr] = action === 'add' ? f : -1;
+                                        newData.fingers[startStr] = action === 'add' ? fingerToUse : null;
+                                      }
+                                      newData.frets[s] = action === 'add' ? f : -1;
+                                      newData.fingers[s] = action === 'add' ? fingerToUse : null;
+                                      setChordModal(prev => ({...prev, data: newData}));
+                                    }
+                                  }}
                                   onClick={() => {
+                                    if (dragRef.current.applied) return;
                                     const newData = { ...chordModal.data, frets: [...chordModal.data.frets], fingers: [...chordModal.data.fingers] };
                                     const availableFingers = [1, 2, 3, 4].filter(n => 
                                       !newData.fingers.some((fn, i) => fn === n && newData.frets[i] !== f && i !== s)
@@ -1274,7 +1321,7 @@ export default function App() {
                       })()}
                     </div>
                     <p className="text-[9px] text-center text-stone-500 mt-3 leading-relaxed max-w-[220px]">
-                      Klicka på strängarna för att placera grepp. Klicka igen för att byta finger. <br/>Sätt 2 eller fler strängar på samma band med finger 1 för barré.
+                      Klicka på strängarna för att placera grepp. Klicka igen för att byta finger. <br/>Klicka och dra över flera strängar för att snabbt skapa ett barré.
                     </p>
                   </div>
 
