@@ -325,7 +325,7 @@ const TrackRowContainer = ({ title, icon: Icon, borderColor, bgHeader, bgContent
 );
 
 const AppLogo = ({ isPrint = false }) => (
-  <div className={`flex items-center gap-3 select-none ${isPrint ? 'bg-transparent' : 'bg-white/60 border border-white/80 p-1.5 pr-5 rounded-2xl shadow-sm transition-colors hover:bg-white/80'}`}>
+  <div className={`flex items-center gap-3 select-none ${isPrint ? 'bg-transparent' : 'bg-stone-100 border border-white p-1.5 pr-5 rounded-2xl shadow-sm transition-colors hover:bg-white'}`}>
     <div className="w-10 h-10 rounded-xl bg-stone-900 flex items-center justify-center shadow-inner border border-stone-700 relative overflow-hidden group shrink-0">
       <div className="absolute inset-0 bg-gradient-to-tr from-stone-800 to-stone-600 opacity-40"></div>
       <div className="flex items-end gap-[3px] h-[18px] relative z-10 group-hover:scale-110 transition-transform duration-300">
@@ -568,7 +568,7 @@ export default function App() {
 
   return (
     <div 
-      className="min-h-screen bg-[#f4f3ef] text-stone-900 font-sans flex flex-col items-center pb-20 print:pb-0 relative selection:bg-stone-300 print:bg-white"
+      className="min-h-screen bg-stone-800 text-stone-900 font-sans flex flex-col items-center pb-20 print:pb-0 relative selection:bg-stone-300 print:bg-white"
       style={{ backgroundImage: NOISE_TEXTURE }}
     >
       
@@ -581,37 +581,37 @@ export default function App() {
       </style>
 
       {/* --- HEADER --- */}
-      <header className="w-full flex flex-wrap items-center justify-between px-6 py-4 bg-[#fcfbf9]/85 backdrop-blur-md border-b border-stone-300/50 shadow-sm z-40 sticky top-0 print:hidden text-stone-800">
+      <header className="w-full flex flex-wrap items-center justify-between px-6 py-4 bg-stone-900/95 backdrop-blur-md border-b border-stone-900 shadow-xl z-40 sticky top-0 print:hidden text-stone-200">
         
         <AppLogo />
 
         <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2 bg-stone-50 px-2 py-1.5 rounded-lg border border-stone-200">
+          <div className="flex items-center gap-2 bg-stone-800 px-2 py-1.5 rounded-lg border border-stone-700 shadow-inner">
             <button 
               onClick={() => setIsEditMode(true)} 
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${isEditMode ? 'bg-white shadow text-stone-800 border border-stone-200/50' : 'text-stone-500 hover:text-stone-700 hover:bg-stone-100'}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${isEditMode ? 'bg-stone-200 shadow text-stone-900 border border-stone-300' : 'text-stone-400 hover:text-stone-200 hover:bg-stone-700'}`}
             >
               <Edit3 size={14} /> Redigera
             </button>
             <button 
               onClick={() => setIsEditMode(false)} 
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${!isEditMode ? 'bg-indigo-600 shadow text-white' : 'text-stone-500 hover:text-stone-700 hover:bg-stone-100'}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${!isEditMode ? 'bg-indigo-500 shadow text-white border border-indigo-400' : 'text-stone-400 hover:text-stone-200 hover:bg-stone-700'}`}
             >
               <Eye size={14} /> Presentation
             </button>
             
-            <div className="w-px h-5 bg-stone-300 mx-1"></div>
+            <div className="w-px h-5 bg-stone-700 mx-1"></div>
             
             <button 
               onClick={handleExport} 
               title="Skriv ut eller spara som PDF (Ctrl+P)"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/40"
             >
               <Printer size={14} /> Skriv ut PDF
             </button>
           </div>
-          <div className="flex items-center gap-2 bg-stone-50 px-3 py-2 rounded-lg border border-stone-200">
-            <span className="text-xs font-bold text-stone-600 w-24 text-center">{totalMeasuresAll} Takter Totalt</span>
+          <div className="flex items-center gap-2 bg-stone-800 px-3 py-2 rounded-lg border border-stone-700 shadow-inner">
+            <span className="text-xs font-bold text-stone-400 w-24 text-center">{totalMeasuresAll} Takter Totalt</span>
           </div>
         </div>
       </header>
@@ -626,7 +626,7 @@ export default function App() {
             <div 
               key={`page-${pageIndex}`} 
               // print:w-[210mm] och print:h-[297mm] tvingar webbläsaren att matcha pappret exakt
-              className={`w-full max-w-[900px] bg-[#fdfdfc] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] rounded-sm flex flex-col relative print:shadow-none border border-stone-200/60 print:border-none print:bg-white print:w-[210mm] print:h-[297mm] print:max-w-none print:overflow-hidden print:m-0 ${pageIndex < globalPages.length - 1 ? 'print:break-after-page' : ''}`}
+              className={`w-full max-w-[900px] bg-[#fdfdfc] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)] rounded-sm flex flex-col relative print:shadow-none border border-stone-900/50 print:border-none print:bg-white print:w-[210mm] print:h-[297mm] print:max-w-none print:overflow-hidden print:m-0 ${pageIndex < globalPages.length - 1 ? 'print:break-after-page' : ''}`}
               style={{ 
                 backgroundImage: PAPER_TEXTURE,
                 minHeight: '1122px' // Exakt en A4-höjd vid 96 DPI (visuellt på skärmen)
