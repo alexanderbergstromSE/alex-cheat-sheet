@@ -195,7 +195,6 @@ const MiniFrettedChord = ({ frets, fingers = [], capo = null, strings = 6, baseF
 
   let autoBarreFret = null;
   let barreMinStr = numStrings, barreMaxStr = -1;
-  const minStringsForBarre = numStrings >= 5 ? 4 : 3;
 
   for (let f = bf; f <= bf + 4; f++) {
     let count = 0;
@@ -207,7 +206,7 @@ const MiniFrettedChord = ({ frets, fingers = [], capo = null, strings = 6, baseF
         if (s > maxS) maxS = s;
       }
     }
-    if (count >= minStringsForBarre) {
+    if (count >= 2) {
       autoBarreFret = f;
       barreMinStr = minS;
       barreMaxStr = maxS;
