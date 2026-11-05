@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -12,7 +12,17 @@ import {
   Printer,
   Music,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  Wrench,
+  Mic,
+  Activity,
+  Power,
+  Timer,
+  Play,
+  Square,
+  MousePointer2,
+  MicOff,
+  Usb
 } from 'lucide-react';
 
 // --- Texturer för Pro-utseende ---
@@ -36,17 +46,17 @@ const FRETTED_INSTRUMENTS = {
   guitar: {
     name: 'Gitarr',
     tabStrings: ['e', 'B', 'G', 'D', 'A', 'E'],
-    defaultChord: { name: '', frets: [0, 0, 0, 0, 0, 0], fingers: [null, null, null, null, null, null], capo: null, baseFret: 1 }
+    defaultChord: { name: '', frets: [0, 0, 0, 0, 0, 0], fingers: [null, null, null, null, null, null], baseFret: 1 }
   },
   ukulele: {
     name: 'Ukulele',
     tabStrings: ['A', 'E', 'C', 'G'],
-    defaultChord: { name: '', frets: [0, 0, 0, 0], fingers: [null, null, null, null], capo: null, baseFret: 1 }
+    defaultChord: { name: '', frets: [0, 0, 0, 0], fingers: [null, null, null, null], baseFret: 1 }
   },
   mandolin: {
     name: 'Mandolin',
     tabStrings: ['E', 'A', 'D', 'G'],
-    defaultChord: { name: '', frets: [0, 0, 0, 0], fingers: [null, null, null, null], capo: null, baseFret: 1 }
+    defaultChord: { name: '', frets: [0, 0, 0, 0], fingers: [null, null, null, null], baseFret: 1 }
   }
 };
 
@@ -95,6 +105,7 @@ const generateId = () => Date.now().toString(36) + Math.random().toString(36).su
 
 // --- NYTT: Hjälpfunktioner för dynamisk textstorlek ---
 const getTitleSizeClass = (text) => {
+  if (text.length > 40) return 'text-xl md:text-2xl print:text-xl';
   if (text.length > 26) return 'text-2xl md:text-3xl print:text-2xl';
   if (text.length > 15) return 'text-3xl md:text-4xl print:text-3xl';
   return 'text-4xl md:text-5xl print:text-4xl';
@@ -110,7 +121,8 @@ const getArtistSizeClass = (text) => {
 const createNewSection = (isFirst = false) => ({
   id: generateId(),
   formSection: '',
-  tempoKey: '',
+  tempo: '',
+  keySignature: '',
   measures: 4,
   drumState: { kick: {}, snare: {}, hihat: {} },
   drumRepeats: {},
@@ -193,34 +205,31 @@ const MiniFrettedChord = ({ frets, fingers = [], capo = null, strings = 6, baseF
   const numStrings = strings;
   const gap = 26 / (numStrings - 1); 
 
-  let autoBarreFret = null;
-  let barreMinStr = numStrings, barreMaxStr = -1;
-
+  const barres = [];
   for (let f = bf; f <= bf + 4; f++) {
-    let count = 0;
-    let minS = numStrings, maxS = -1;
-    for (let s = 0; s < numStrings; s++) {
-      if (frets[s] === f && fingers[s] === 1) {
-        count++;
-        if (s < minS) minS = s;
-        if (s > maxS) maxS = s;
+    for (let finger = 1; finger <= 4; finger++) {
+      let count = 0;
+      let minS = numStrings, maxS = -1;
+      for (let s = 0; s < numStrings; s++) {
+        if (frets[s] === f && fingers[s] === finger) {
+          count++;
+          if (s < minS) minS = s;
+          if (s > maxS) maxS = s;
+        }
       }
-    }
-    if (count >= 2) {
-      autoBarreFret = f;
-      barreMinStr = minS;
-      barreMaxStr = maxS;
-      break;
+      if (count >= 2) {
+        barres.push({ fret: f, finger, minStr: minS, maxStr: maxS });
+      }
     }
   }
 
   return (
-    <svg viewBox="0 0 40 46" className="w-full h-full max-h-[80px] drop-shadow-sm">
-      <rect width="40" height="46" fill="#ffffff" stroke="#d1d5db" strokeWidth="1" rx="4" />
+    <svg viewBox="-6 0 46 46" className="w-full h-full max-h-[80px] drop-shadow-sm">
+      <rect x="0" y="0" width="40" height="46" fill="#ffffff" stroke="#d1d5db" strokeWidth="1" rx="4" />
       {Array.from({length: numStrings}).map((_, i) => <line key={`v-${i}`} x1={7 + i*gap} y1="10" x2={7 + i*gap} y2="40" stroke="#9ca3af" strokeWidth="1" />)}
       {[0,1,2,3,4].map(i => <line key={`h-${i}`} x1="7" y1={10 + i*7.5} x2="33" y2={10 + i*7.5} stroke="#9ca3af" strokeWidth={i===0 && bf === 1 ? "2" : "1"} />)}
       
-      {bf >= 4 && <text x="5.5" y="10" fontSize="3.2" fill="#4b5563" fontWeight="bold" textAnchor="end" dominantBaseline="central">{bf}</text>}
+      {bf >= 4 && <text x="5" y="10" fontSize="4" fill="#111827" fontWeight="bold" textAnchor="end" dominantBaseline="central">{bf}</text>}
 
       {capo && capo > 0 && capo <= 9 && (
         <g>
@@ -229,16 +238,16 @@ const MiniFrettedChord = ({ frets, fingers = [], capo = null, strings = 6, baseF
         </g>
       )}
 
-      {autoBarreFret && (
-        <g>
+      {barres.map((barre, idx) => (
+        <g key={`barre-${idx}`}>
           <line 
-            x1={7 + barreMinStr * gap} y1={10 + (autoBarreFret - bf + 0.5)*7.5} 
-            x2={7 + barreMaxStr * gap} y2={10 + (autoBarreFret - bf + 0.5)*7.5} 
+            x1={7 + barre.minStr * gap} y1={10 + (barre.fret - bf + 0.5)*7.5} 
+            x2={7 + barre.maxStr * gap} y2={10 + (barre.fret - bf + 0.5)*7.5} 
             stroke="#0d9488" strokeWidth="4.6" strokeLinecap="round" 
           />
-          <text x={7 + barreMinStr * gap} y={10 + (autoBarreFret - bf + 0.5)*7.5 + 1} fontSize="3.5" fill="white" textAnchor="middle" dominantBaseline="middle" fontWeight="bold">1</text>
+          <text x={7 + barre.minStr * gap} y={10 + (barre.fret - bf + 0.5)*7.5 + 1} fontSize="3.5" fill="white" textAnchor="middle" dominantBaseline="middle" fontWeight="bold">{barre.finger}</text>
         </g>
-      )}
+      ))}
 
       {frets.map((fret, stringIndex) => {
         const x = 7 + stringIndex * gap;
@@ -248,7 +257,7 @@ const MiniFrettedChord = ({ frets, fingers = [], capo = null, strings = 6, baseF
         if (fret === 0) return <circle key={`f-${stringIndex}`} cx={x} cy="3" r="1.5" fill="none" stroke="#0d9488" strokeWidth="1" />;
         
         if (fret < bf || fret > bf + 4) return null;
-        if (fret === autoBarreFret && finger === 1) return null; 
+        if (barres.some(b => b.fret === fret && b.finger === finger)) return null; 
         
         const y = 10 + (fret - bf + 0.5)*7.5;
         return (
@@ -360,11 +369,877 @@ const AppLogo = ({ isPrint = false }) => (
   </div>
 );
 
+// --- VERKTYGSLÅDANS KOMPONENTER ---
+
+const chromaticNotes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+// 1. Metronom
+function Metronom() {
+    // --- Ljud & Timing State ---
+    const audioCtxRef = useRef(null);
+    const [isMetroPlaying, setIsMetroPlaying] = useState(false);
+    const [bpm, setBpm] = useState(120);
+    const [beatsPerBar, setBeatsPerBar] = useState(4);
+    const [noteValue, setNoteValue] = useState(4);
+    const [currentBeat, setCurrentBeat] = useState(0);
+    
+    // --- Referenser för exakt Web Audio schemaläggning ---
+    const nextNoteTimeRef = useRef(0.0);
+    const currentBeatRef = useRef(0);
+    const metroTimerRef = useRef(null);
+    const tapTimesRef = useRef([]);
+
+    // ==========================================
+    // INITIALISERA LJUDMOTOR (Kringgår Autoplay-blockering)
+    // ==========================================
+    const initAudio = useCallback(() => {
+        if (!audioCtxRef.current && typeof window !== 'undefined') {
+            const Ctx = window.AudioContext || window.webkitAudioContext;
+            audioCtxRef.current = new Ctx();
+        }
+        if (audioCtxRef.current?.state === 'suspended') {
+            audioCtxRef.current.resume();
+        }
+    }, []);
+
+    // ==========================================
+    // METRONOM-LOGIK
+    // ==========================================
+    const scheduleMetroNote = (beatNumber, time) => {
+        if (!audioCtxRef.current) return;
+        
+        const osc = audioCtxRef.current.createOscillator();
+        const gain = audioCtxRef.current.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtxRef.current.destination);
+        
+        // Betonad etta (880Hz), resterande slag (440Hz)
+        osc.frequency.value = (beatNumber === 0) ? 880.0 : 440.0;
+        
+        // Snabb attack och kort decay för ett skarpt klick
+        gain.gain.setValueAtTime(0, time);
+        gain.gain.linearRampToValueAtTime(1, time + 0.005);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+        
+        osc.start(time);
+        osc.stop(time + 0.1);
+        
+        // Visuell synkning: Använd setTimeout för att tända pricken exakt när ljudet spelas upp
+        const timeToPlay = (time - audioCtxRef.current.currentTime) * 1000;
+        setTimeout(() => {
+            setCurrentBeat(beatNumber);
+        }, Math.max(0, timeToPlay));
+    };
+
+    const nextMetroNote = useCallback(() => {
+        const secondsPerBeat = (60.0 / bpm) * (4 / noteValue);
+        nextNoteTimeRef.current += secondsPerBeat;
+        currentBeatRef.current = (currentBeatRef.current + 1) % beatsPerBar;
+    }, [bpm, beatsPerBar, noteValue]);
+
+    const metroScheduler = useCallback(() => {
+        // Titta framåt 0.1s i tiden och schemalägg de slag som hamnar inom den ramen
+        while (nextNoteTimeRef.current < audioCtxRef.current.currentTime + 0.1) {
+            scheduleMetroNote(currentBeatRef.current, nextNoteTimeRef.current);
+            nextMetroNote();
+        }
+        // Kör funktionen igen ofta nog för att mata schemat (25ms)
+        metroTimerRef.current = setTimeout(metroScheduler, 25);
+    }, [nextMetroNote]);
+
+    const toggleMetronome = () => {
+        initAudio();
+        if (isMetroPlaying) {
+            setIsMetroPlaying(false);
+            clearTimeout(metroTimerRef.current);
+            setCurrentBeat(0);
+        } else {
+            setIsMetroPlaying(true);
+            currentBeatRef.current = 0;
+            setCurrentBeat(0);
+            nextNoteTimeRef.current = audioCtxRef.current.currentTime + 0.05; // Starta med lite marginal
+            metroScheduler();
+        }
+    };
+
+    const handleTapTempo = () => {
+        initAudio(); // Väck ljudmotorn om det är första klicket
+        const now = performance.now();
+        tapTimesRef.current.push(now);
+        
+        // Spara bara de 4 senaste klicken
+        if (tapTimesRef.current.length > 4) {
+            tapTimesRef.current.shift();
+        }
+        
+        // Räkna ut snittet av intervallerna om vi har minst 2 klick
+        if (tapTimesRef.current.length >= 2) {
+            let intervals = [];
+            for (let i = 1; i < tapTimesRef.current.length; i++) {
+                intervals.push(tapTimesRef.current[i] - tapTimesRef.current[i - 1]);
+            }
+            let avgInterval = intervals.reduce((a, b) => a + b) / intervals.length;
+            let newBpm = Math.round(60000 / avgInterval);
+            
+            if (newBpm >= 30 && newBpm <= 250) {
+                setBpm(newBpm);
+            }
+        }
+    };
+
+    // Städa upp timern om komponenten avmonteras
+    useEffect(() => {
+        return () => clearTimeout(metroTimerRef.current);
+    }, []);
+
+    // ==========================================
+    // RENDER (UI)
+    // ==========================================
+    return (
+        <div className="bg-slate-800 rounded-2xl p-6 flex flex-col h-full border border-slate-700 shadow-xl font-sans text-white select-none">
+            <h2 className="text-xl font-semibold flex items-center gap-2 mb-6 shrink-0 text-emerald-400">
+                <Timer size={24} />
+                <span className="text-white">Metronom</span>
+            </h2>
+            
+            <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+                
+                {/* BPM Display */}
+                <div className="text-center mb-6">
+                    <div className="flex items-baseline justify-center gap-2">
+                        <span className="text-6xl font-bold text-white">{bpm}</span>
+                        <span className="text-slate-400 font-medium">BPM</span>
+                    </div>
+                </div>
+                
+                {/* Inställningar (Taktart & Notvärde) */}
+                <div className="flex items-center gap-3 mb-8 bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
+                    <span className="text-sm text-slate-400">Taktart:</span>
+                    <input 
+                        type="number" 
+                        value={beatsPerBar} 
+                        onChange={(e) => setBeatsPerBar(parseInt(e.target.value) || 4)}
+                        min="1" max="32" 
+                        className="w-14 bg-slate-700 text-white text-center rounded py-1 px-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <span className="text-slate-400">/</span>
+                    <select 
+                        value={noteValue}
+                        onChange={(e) => setNoteValue(parseInt(e.target.value) || 4)}
+                        className="bg-slate-700 text-white rounded py-1 px-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                        <option value="4">4 (Fjärdedelar)</option>
+                        <option value="8">8 (Åttondelar)</option>
+                        <option value="16">16 (Sextondelar)</option>
+                    </select>
+                </div>
+
+                {/* BPM Slider */}
+                <input 
+                    type="range" 
+                    min="30" max="250" 
+                    value={bpm} 
+                    onChange={(e) => setBpm(parseInt(e.target.value))}
+                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-400 mb-8"
+                />
+                
+                {/* Blinkande Prickar (Visuell Metronom) */}
+                <div className="flex gap-3 mb-8 h-4 items-center justify-center w-full flex-wrap">
+                    {Array.from({ length: beatsPerBar }).map((_, i) => (
+                        <div 
+                            key={i} 
+                            className={`w-3 h-3 rounded-full transition-all duration-100 ${
+                                i === currentBeat && isMetroPlaying 
+                                ? 'bg-sky-400 shadow-[0_0_10px_#38bdf8]' 
+                                : 'bg-slate-600'
+                            }`} 
+                        />
+                    ))}
+                </div>
+
+                {/* Knappar */}
+                <div className="grid grid-cols-2 gap-4 w-full mt-auto">
+                    <button 
+                        onClick={handleTapTempo}
+                        className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors duration-200 active:bg-slate-500 flex flex-col items-center justify-center"
+                    >
+                        <div className="flex items-center gap-1">
+                            <MousePointer2 size={16} /> Tap Tempo
+                        </div>
+                        <span className="block text-[10px] text-slate-400 mt-1 font-normal">Klicka i takt</span>
+                    </button>
+                    
+                    <button 
+                        onClick={toggleMetronome}
+                        className={`text-white font-bold py-3 px-4 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.3)] ${
+                            isMetroPlaying ? 'bg-rose-500 hover:bg-rose-400' : 'bg-emerald-500 hover:bg-emerald-400'
+                        }`}
+                    >
+                        {isMetroPlaying 
+                            ? <Square size={20} fill="currentColor" /> 
+                            : <Play size={20} fill="currentColor" />
+                        }
+                        {isMetroPlaying ? 'Stoppa' : 'Starta'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// 2. Strobe Tuner
+function StrobeTuner() {
+    // --- Audio Context & Strömmar ---
+    const audioCtxRef = useRef(null);
+    const tunerAnalyserRef = useRef(null);
+    const tunerStreamRef = useRef(null);
+    const tunerRafRef = useRef(null);
+    
+    // --- UI-referenser för prestanda (Stroboskop-rotation) ---
+    const strobeDiscRef = useRef(null);
+    const strobeRotationRef = useRef(0);
+
+    // --- State ---
+    const [isTunerActive, setIsTunerActive] = useState(false);
+    const [tunerNote, setTunerNote] = useState("-");
+    const [tunerCents, setTunerCents] = useState("Vilande");
+    const [tunerColor, setTunerColor] = useState("#334155"); // slate-700
+    const [tunerError, setTunerError] = useState("");
+
+    // ==========================================
+    // INITIALISERA LJUDMOTOR
+    // ==========================================
+    const initAudio = useCallback(() => {
+        if (!audioCtxRef.current && typeof window !== 'undefined') {
+            const Ctx = window.AudioContext || window.webkitAudioContext;
+            audioCtxRef.current = new Ctx();
+        }
+        if (audioCtxRef.current?.state === 'suspended') {
+            audioCtxRef.current.resume();
+        }
+    }, []);
+
+    // ==========================================
+    // STÄMMAPP-LOGIK (Matematik & Pitch Detection)
+    // ==========================================
+    const autoCorrelate = (buf, sampleRate) => {
+        let SIZE = buf.length;
+        let rms = 0;
+        for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
+        rms = Math.sqrt(rms / SIZE);
+        
+        if (rms < 0.01) return -1; // För tyst
+
+        let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+        for (let i = 0; i < SIZE / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+        for (let i = 1; i < SIZE / 2; i++) if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+
+        buf = buf.slice(r1, r2);
+        SIZE = buf.length;
+        let c = new Array(SIZE).fill(0);
+        for (let i = 0; i < SIZE; i++)
+            for (let j = 0; j < SIZE - i; j++)
+                c[i] = c[i] + buf[j] * buf[j + i];
+
+        let d = 0; while (c[d] > c[d + 1]) d++;
+        let maxval = -1, maxpos = -1;
+        for (let i = d; i < SIZE; i++) {
+            if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+        }
+        
+        let T0 = maxpos;
+        let x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1];
+        let a = (x1 + x3 - 2 * x2) / 2;
+        let b = (x3 - x1) / 2;
+        if (a) T0 = T0 - b / (2 * a);
+        
+        return sampleRate / T0;
+    };
+
+    const updatePitch = useCallback(() => {
+        if (!tunerAnalyserRef.current || !audioCtxRef.current) return;
+        
+        const buf = new Float32Array(2048);
+        tunerAnalyserRef.current.getFloatTimeDomainData(buf);
+        let ac = autoCorrelate(buf, audioCtxRef.current.sampleRate);
+
+        if (ac === -1) {
+            setTunerColor("#334155"); // standardgrå
+            if (strobeDiscRef.current) strobeDiscRef.current.style.opacity = "0.2";
+        } else {
+            if (strobeDiscRef.current) strobeDiscRef.current.style.opacity = "1";
+            let pitch = ac;
+            let noteNum = Math.round(12 * (Math.log(pitch / 440) / Math.log(2))) + 69;
+            let noteName = chromaticNotes[noteNum % 12];
+            let expectedFreq = 440 * Math.pow(2, (noteNum - 69) / 12);
+            let detune = Math.floor(1200 * Math.log(pitch / expectedFreq) / Math.log(2));
+            
+            // Uppdatera stroboskopets rotation direkt i DOM:en för prestanda (inte via React State)
+            strobeRotationRef.current += detune * 0.2;
+            if (strobeDiscRef.current) {
+                strobeDiscRef.current.style.transform = `rotate(${strobeRotationRef.current}deg)`;
+            }
+            
+            setTunerNote(noteName);
+            
+            if (detune === 0) {
+                setTunerCents("Helt stämd!");
+                setTunerColor("#22c55e"); // grön
+            } else {
+                setTunerCents(`${Math.abs(detune)} cents ${detune < 0 ? "för låg" : "för hög"}`);
+                if(Math.abs(detune) < 5) setTunerColor("#22c55e"); // grön (nästan rätt)
+                else if (Math.abs(detune) < 15) setTunerColor("#eab308"); // gul (lite fel)
+                else setTunerColor("#ef4444"); // röd (mycket fel)
+            }
+        }
+        
+        // Loopa funktionen
+        tunerRafRef.current = requestAnimationFrame(updatePitch);
+    }, []);
+
+    const toggleTuner = async () => {
+        initAudio();
+        
+        if (isTunerActive) {
+            // Stäng av mikrofon och rensa UI
+            setIsTunerActive(false);
+            if (tunerRafRef.current) cancelAnimationFrame(tunerRafRef.current);
+            if (tunerStreamRef.current) {
+                tunerStreamRef.current.getTracks().forEach(track => track.stop());
+            }
+            setTunerNote("-");
+            setTunerCents("Vilande");
+            setTunerColor("#334155");
+            if (strobeDiscRef.current) strobeDiscRef.current.style.opacity = "0.2";
+        } else {
+            // Starta mikrofon
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                tunerStreamRef.current = stream;
+                tunerAnalyserRef.current = audioCtxRef.current.createAnalyser();
+                tunerAnalyserRef.current.fftSize = 2048;
+                
+                const source = audioCtxRef.current.createMediaStreamSource(stream);
+                source.connect(tunerAnalyserRef.current);
+                
+                setIsTunerActive(true);
+                setTunerError("");
+                updatePitch();
+            } catch (err) {
+                console.error(err);
+                setTunerError("Kunde inte komma åt mikrofonen. Blockeras den av webbläsaren?");
+            }
+        }
+    };
+
+    // Städa upp vid avmontering av komponenten
+    useEffect(() => {
+        return () => {
+            if (tunerRafRef.current) cancelAnimationFrame(tunerRafRef.current);
+            if (tunerStreamRef.current) {
+                tunerStreamRef.current.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, []);
+
+    // ==========================================
+    // RENDER (UI)
+    // ==========================================
+    return (
+        <div className="bg-slate-800 rounded-2xl p-6 flex flex-col h-full border border-slate-700 shadow-xl font-sans text-white select-none">
+            <h2 className="text-xl font-semibold flex items-center gap-2 mb-6 shrink-0 text-sky-400">
+                <Activity size={24} />
+                <span className="text-white">Strobe Tuner</span>
+            </h2>
+            
+            <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+                
+                {/* Visualiserings-ring */}
+                <div 
+                    className="relative w-48 h-48 sm:w-56 sm:h-56 bg-slate-900 rounded-full flex items-center justify-center border-8 overflow-hidden mb-6 shrink-0 transition-all duration-300"
+                    style={{
+                        borderColor: tunerColor === '#22c55e' ? '#22c55e' : '#334155',
+                        boxShadow: tunerColor === '#22c55e' ? '0 0 30px rgba(34, 197, 94, 0.4)' : 'none'
+                    }}
+                >
+                    {/* Den snurrande stroboskopskivan */}
+                    <div 
+                        ref={strobeDiscRef}
+                        className="absolute inset-0 w-full h-full rounded-full opacity-20 transition-opacity duration-300"
+                        style={{ background: 'repeating-conic-gradient(from 0deg, #e2e8f0 0deg 10deg, #0f172a 10deg 20deg)' }}
+                    />
+                    
+                    {/* Centrumvisaren */}
+                    <div 
+                        className="absolute w-28 h-28 sm:w-32 sm:h-32 bg-slate-800 rounded-full flex flex-col items-center justify-center border-4 z-10 transition-colors duration-300"
+                        style={{ borderColor: tunerColor }}
+                    >
+                        <div className="text-4xl font-bold text-white">{tunerNote}</div>
+                        <div className="text-[10px] text-slate-400 mt-1">{tunerCents}</div>
+                    </div>
+                </div>
+                
+                {/* Instruktion */}
+                <p className="text-[10px] text-slate-500 text-center mb-6">
+                    Mönstret stannar när tonen är ren.<br/>Roterar det <strong className="text-slate-300">medurs</strong> = för hög, <strong className="text-slate-300">moturs</strong> = för låg.
+                </p>
+                
+                {/* Felmeddelande (Vid blockerad mikrofon) */}
+                {tunerError && (
+                    <p className="text-xs text-rose-400 text-center mb-4 px-2">{tunerError}</p>
+                )}
+                
+                {/* Start-knapp */}
+                <button 
+                    onClick={toggleTuner}
+                    className={`w-full font-semibold py-3 px-4 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2 mt-auto ${
+                        isTunerActive ? 'bg-rose-600 hover:bg-rose-500' : 'bg-slate-700 hover:bg-slate-600'
+                    }`}
+                >
+                    {isTunerActive ? <MicOff size={20} /> : <Mic size={20} />}
+                    {isTunerActive ? 'Stäng av' : 'Aktivera Mikrofon'}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// 3. Interaktivt Piano
+const pianoKeysData = [
+    { note: 'C4', freq: 261.63, type: 'white' },
+    { note: 'C#4', freq: 277.18, type: 'black', pos: 1 },
+    { note: 'D4', freq: 293.66, type: 'white' },
+    { note: 'D#4', freq: 311.13, type: 'black', pos: 2 },
+    { note: 'E4', freq: 329.63, type: 'white' },
+    { note: 'F4', freq: 349.23, type: 'white' },
+    { note: 'F#4', freq: 369.99, type: 'black', pos: 4 },
+    { note: 'G4', freq: 392.00, type: 'white' },
+    { note: 'G#4', freq: 415.30, type: 'black', pos: 5 },
+    { note: 'A4', freq: 440.00, type: 'white' },
+    { note: 'A#4', freq: 466.16, type: 'black', pos: 6 },
+    { note: 'B4', freq: 493.88, type: 'white' },
+    { note: 'C5', freq: 523.25, type: 'white' },
+    { note: 'C#5', freq: 554.37, type: 'black', pos: 8 },
+    { note: 'D5', freq: 587.33, type: 'white' },
+    { note: 'D#5', freq: 622.25, type: 'black', pos: 9 },
+    { note: 'E5', freq: 659.25, type: 'white' },
+    { note: 'F5', freq: 698.46, type: 'white' },
+    { note: 'F#5', freq: 739.99, type: 'black', pos: 11 },
+    { note: 'G5', freq: 783.99, type: 'white' },
+    { note: 'G#5', freq: 830.61, type: 'black', pos: 12 },
+    { note: 'A5', freq: 880.00, type: 'white' },
+    { note: 'A#5', freq: 932.33, type: 'black', pos: 13 },
+    { note: 'B5', freq: 987.77, type: 'white' },
+    { note: 'C6', freq: 1046.50, type: 'white' }
+];
+
+function PianoComponent() {
+    // --- State ---
+    const [midiActive, setMidiActive] = useState(false);
+    const [activeKeys, setActiveKeys] = useState([]);
+    const [displayNote, setDisplayNote] = useState("-");
+    
+    // --- Refs ---
+    const audioCtxRef = useRef(null);
+    const activeSynthsRef = useRef({});
+    const pianoNodesRef = useRef(null);
+    const isDraggingRef = useRef(false);
+
+    // ==========================================
+    // LJUDMOTOR & ROUTING
+    // ==========================================
+    const createReverbIR = (ctx) => {
+        const length = ctx.sampleRate * 2.5; 
+        const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+        for (let channel = 0; channel < 2; channel++) {
+            const data = impulse.getChannelData(channel);
+            for (let i = 0; i < length; i++) {
+                const decay = Math.exp(-i / (ctx.sampleRate * 0.4));
+                data[i] = (Math.random() * 2 - 1) * decay;
+            }
+        }
+        const convolver = ctx.createConvolver();
+        convolver.buffer = impulse;
+        return convolver;
+    };
+
+    const initPianoAudioRouting = (ctx) => {
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 3000;
+        filter.Q.value = 0.5;
+
+        const dry = ctx.createGain();
+        dry.gain.value = 1.0;
+        const wet = ctx.createGain();
+        wet.gain.value = 0.3;
+
+        const reverb = createReverbIR(ctx);
+
+        filter.connect(dry);
+        filter.connect(reverb);
+        reverb.connect(wet);
+
+        dry.connect(ctx.destination);
+        wet.connect(ctx.destination);
+
+        pianoNodesRef.current = { filter, dry, wet, reverb };
+    };
+
+    const initAudio = useCallback(() => {
+        if (!audioCtxRef.current && typeof window !== 'undefined') {
+            const Ctx = window.AudioContext || window.webkitAudioContext;
+            audioCtxRef.current = new Ctx();
+            initPianoAudioRouting(audioCtxRef.current);
+        }
+        if (audioCtxRef.current?.state === 'suspended') {
+            audioCtxRef.current.resume();
+        }
+    }, []);
+
+    // Global interaktions-lyssnare för att låsa upp ljudmotorn
+    useEffect(() => {
+        const handleInteraction = () => initAudio();
+        window.addEventListener('pointerdown', handleInteraction, { once: true });
+        window.addEventListener('keydown', handleInteraction, { once: true });
+        return () => {
+            window.removeEventListener('pointerdown', handleInteraction);
+            window.removeEventListener('keydown', handleInteraction);
+        };
+    }, [initAudio]);
+
+    // ==========================================
+    // SYNTES (Pianots ljud)
+    // ==========================================
+    const playPianoNote = useCallback((freq, noteName) => {
+        initAudio();
+        if (activeSynthsRef.current[noteName] || !audioCtxRef.current || !pianoNodesRef.current) return;
+
+        const ctx = audioCtxRef.current;
+        const t = ctx.currentTime;
+        const { filter } = pianoNodesRef.current;
+        
+        // Huvud-Oscillator (Grundton)
+        const osc = ctx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        const vca = ctx.createGain();
+        vca.gain.setValueAtTime(0, t);
+        vca.gain.linearRampToValueAtTime(0.5, t + 0.002);
+        vca.gain.exponentialRampToValueAtTime(0.2, t + 0.1);
+        osc.connect(vca);
+        vca.connect(filter);
+
+        // Överton-Oscillator (1 oktav upp)
+        const harm = ctx.createOscillator();
+        harm.type = 'triangle';
+        harm.frequency.value = freq * 2;
+        const harmVca = ctx.createGain();
+        harmVca.gain.setValueAtTime(0, t);
+        harmVca.gain.linearRampToValueAtTime(0.3, t + 0.002);
+        harmVca.gain.exponentialRampToValueAtTime(0.001, t + 4.0);
+        harm.connect(harmVca);
+        harmVca.connect(filter);
+
+        // Brus-Attack (Klubbslag)
+        const noiseBufSize = ctx.sampleRate * 0.02;
+        const noiseBuf = ctx.createBuffer(1, noiseBufSize, ctx.sampleRate);
+        const noiseData = noiseBuf.getChannelData(0);
+        for(let i=0; i<noiseBufSize; i++) noiseData[i] = Math.random() * 2 - 1;
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuf;
+        const noiseVca = ctx.createGain();
+        noiseVca.gain.setValueAtTime(0.2, t);
+        noiseVca.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
+        noise.connect(noiseVca);
+        noiseVca.connect(filter);
+
+        // LFO (Vibrato)
+        const lfo = ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = 2.2;
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.setValueAtTime(0, t);
+        lfoGain.gain.setValueAtTime(0, t + 1.0); // Fördröjt inhopp
+        lfoGain.gain.linearRampToValueAtTime(6, t + 1.5);
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.detune);
+        lfoGain.connect(harm.detune);
+
+        // Starta allt
+        osc.start(t);
+        harm.start(t);
+        noise.start(t);
+        lfo.start(t);
+
+        activeSynthsRef.current[noteName] = { osc, harm, vca, harmVca, noise, lfo };
+        
+        setDisplayNote(noteName);
+        setActiveKeys(prev => [...new Set([...prev, noteName])]);
+    }, [initAudio]);
+
+    const stopPianoNote = useCallback((noteName) => {
+        const synth = activeSynthsRef.current[noteName];
+        if (synth && audioCtxRef.current) {
+            const t = audioCtxRef.current.currentTime;
+            
+            // Release-fas (0.75s)
+            synth.vca.gain.cancelScheduledValues(t);
+            synth.vca.gain.setValueAtTime(synth.vca.gain.value, t);
+            synth.vca.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
+            
+            synth.harmVca.gain.cancelScheduledValues(t);
+            synth.harmVca.gain.setValueAtTime(synth.harmVca.gain.value, t);
+            synth.harmVca.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
+
+            // Stäng av och koppla ur oscillatorerna efter release-tiden
+            setTimeout(() => {
+                try {
+                    synth.osc.stop();
+                    synth.harm.stop();
+                    synth.lfo.stop();
+                    synth.osc.disconnect();
+                    synth.harm.disconnect();
+                    synth.vca.disconnect();
+                    synth.harmVca.disconnect();
+                    synth.lfo.disconnect();
+                } catch(e){}
+            }, 800);
+            
+            delete activeSynthsRef.current[noteName];
+        }
+        
+        // Uppdatera UI
+        setActiveKeys(prev => {
+            const next = prev.filter(k => k !== noteName);
+            if (next.length === 0) setDisplayNote("-");
+            return next;
+        });
+    }, []);
+
+    // ==========================================
+    // MUS & TOUCH EVENT (GLISSANDO)
+    // ==========================================
+    const handleKeyPointerDown = (e, key) => {
+        e.preventDefault();
+        isDraggingRef.current = true;
+        playPianoNote(key.freq, key.note);
+    };
+
+    const handleKeyPointerEnter = (e, key) => {
+        if (isDraggingRef.current) {
+            playPianoNote(key.freq, key.note);
+        }
+    };
+
+    const handleKeyPointerUpOut = (key) => {
+        stopPianoNote(key.note);
+    };
+
+    useEffect(() => {
+        const handleGlobalPointerUp = () => {
+            isDraggingRef.current = false;
+        };
+        window.addEventListener('pointerup', handleGlobalPointerUp);
+        return () => window.removeEventListener('pointerup', handleGlobalPointerUp);
+    }, []);
+
+    // ==========================================
+    // MIDI SUPPORT
+    // ==========================================
+    useEffect(() => {
+        if (typeof navigator !== 'undefined' && navigator.requestMIDIAccess) {
+            navigator.requestMIDIAccess().then((midiAccess) => {
+                let isConnected = false;
+                
+                const handleMIDIMessage = (msg) => {
+                    initAudio(); // Väck ljudet om det sover
+                    const command = msg.data[0] >> 4;
+                    const midiNote = msg.data[1];
+                    const velocity = msg.data.length > 2 ? msg.data[2] : 0;
+        
+                    const noteName = chromaticNotes[midiNote % 12];
+                    const octave = Math.floor(midiNote / 12) - 1;
+                    const fullNote = noteName + octave;
+                    const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
+        
+                    if (command === 9 && velocity > 0) {
+                        playPianoNote(freq, fullNote);
+                    } else if (command === 8 || (command === 9 && velocity === 0)) {
+                        stopPianoNote(fullNote);
+                    }
+                };
+
+                for (let input of midiAccess.inputs.values()) {
+                    input.onmidimessage = handleMIDIMessage;
+                    isConnected = true;
+                }
+                setMidiActive(isConnected);
+
+                midiAccess.onstatechange = (e) => {
+                    if(e.port.type === 'input') {
+                        if(e.port.state === 'connected') {
+                            e.port.onmidimessage = handleMIDIMessage;
+                            setMidiActive(true);
+                        } else if (e.port.state === 'disconnected') {
+                            let anyLeft = false;
+                            for(let i of midiAccess.inputs.values()) anyLeft = true;
+                            if(!anyLeft) setMidiActive(false);
+                        }
+                    }
+                };
+            }).catch(() => {
+                console.warn("MIDI blockerat eller ej tillgängligt.");
+            });
+        }
+    }, [playPianoNote, stopPianoNote, initAudio]);
+
+    // ==========================================
+    // RENDER (UI)
+    // ==========================================
+    const numWhiteKeys = 15;
+
+    return (
+        <div className="bg-slate-800 rounded-2xl p-6 flex flex-col h-full border border-slate-700 shadow-xl font-sans text-white select-none">
+            {/* Header / Info */}
+            <div className="flex justify-between items-center mb-4 shrink-0">
+                <h2 className="text-xl font-semibold flex items-center gap-2 text-indigo-400">
+                    <Music size={24} />
+                    <span className="text-white">Interaktivt Piano</span>
+                </h2>
+                <div className="flex items-center gap-3">
+                    <div 
+                        className={`text-xs font-semibold px-2 py-1 rounded bg-slate-800 border flex items-center gap-1 transition-colors ${
+                            midiActive ? 'border-emerald-500 text-emerald-400' : 'border-slate-700 text-slate-400'
+                        }`} 
+                        title={midiActive ? "MIDI Ansluten" : "Väntar på MIDI..."}
+                    >
+                        <Usb size={14} className={midiActive ? "text-emerald-400" : "text-slate-500"}/>
+                        MIDI
+                    </div>
+                    <div className="bg-slate-900 px-3 py-1.5 rounded border border-slate-700 text-xs">
+                        Ton: <span className="font-bold text-indigo-400 w-5 inline-block text-center">{displayNote}</span>
+                    </div>
+                </div>
+            </div>
+            
+            {/* Själva klaviaturen */}
+            <div className="flex-1 flex items-center justify-center min-h-0 w-full">
+                {/* Aspect Ratio Container (5:2) tvingar proportionerna att förbli korrekta */}
+                <div className="w-full aspect-[5/2] bg-slate-900 rounded-lg p-1 border-b-4 border-slate-950 flex flex-col">
+                    
+                    <div className="flex relative w-full h-full" onMouseLeave={() => isDraggingRef.current = false}>
+                        
+                        {/* Vita tangenter (Bottenlager) */}
+                        <div className="flex w-full h-full relative z-10">
+                            {pianoKeysData.filter(k => k.type === 'white').map((key) => {
+                                const isActive = activeKeys.includes(key.note);
+                                return (
+                                    <div 
+                                        key={key.note}
+                                        className={`flex-1 border border-slate-300 rounded-b-md relative cursor-pointer select-none transition-colors duration-100 ${
+                                            isActive ? 'bg-slate-300' : 'bg-white'
+                                        }`}
+                                        onPointerDown={(e) => handleKeyPointerDown(e, key)}
+                                        onPointerEnter={(e) => handleKeyPointerEnter(e, key)}
+                                        onPointerUp={() => handleKeyPointerUpOut(key)}
+                                        onPointerOut={() => handleKeyPointerUpOut(key)}
+                                    >
+                                        {/* Hjälp-etiketter på C-tangenterna */}
+                                        {key.note.startsWith('C') && (
+                                            <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-slate-400 pointer-events-none">
+                                                {key.note}
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Svarta tangenter (Topplager) */}
+                        {pianoKeysData.filter(k => k.type === 'black').map((key) => {
+                            const isActive = activeKeys.includes(key.note);
+                            return (
+                                <div 
+                                    key={key.note}
+                                    className={`absolute h-[60%] z-20 rounded-b cursor-pointer select-none transition-colors duration-100 shadow-[inset_0_-4px_4px_rgba(0,0,0,0.5)] transform -translate-x-1/2 ${
+                                        isActive ? 'bg-slate-600' : 'bg-slate-800'
+                                    }`}
+                                    style={{ 
+                                        width: `calc((100% / ${numWhiteKeys}) * 0.7)`,
+                                        left: `calc((100% / ${numWhiteKeys}) * ${key.pos})`
+                                    }}
+                                    onPointerDown={(e) => handleKeyPointerDown(e, key)}
+                                    onPointerEnter={(e) => handleKeyPointerEnter(e, key)}
+                                    onPointerUp={() => handleKeyPointerUpOut(key)}
+                                    onPointerOut={() => handleKeyPointerUpOut(key)}
+                                />
+                            );
+                        })}
+                    </div>
+
+                </div>
+            </div>
+            <p className="text-[10px] text-slate-500 text-center mt-4 shrink-0">Du kan dra pekaren över tangenterna (glissando) för att spela skalor.</p>
+        </div>
+    );
+}
+
+// --- Musiklärarens Verktygslåda ---
+const MusicToolbox = ({ onClose }) => {
+  const [audioStarted, setAudioStarted] = useState(false);
+  
+  return (
+    <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-50 overflow-y-auto text-slate-200 font-sans p-4 sm:p-8 flex flex-col print:hidden">
+      <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
+        
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8 bg-slate-800/50 p-4 rounded-2xl border border-slate-700 shadow-lg">
+          <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-3 tracking-wide">
+            <div className="p-2 bg-emerald-500/20 rounded-lg border border-emerald-500/30">
+              <Wrench className="text-emerald-400" size={24} />
+            </div>
+            Musiklärarens Verktygslåda
+          </h2>
+          <div className="flex items-center gap-4">
+            {!audioStarted && (
+              <button 
+                onClick={() => setAudioStarted(true)} 
+                className="flex items-center gap-2 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-lg transition-colors shadow-lg shadow-rose-900/20 animate-pulse"
+              >
+                <Power size={14} /> Starta Ljudmotor
+              </button>
+            )}
+            <button onClick={onClose} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors border border-slate-600">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Grid för Verktygen */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 flex-1">
+          
+          {/* Verktyg 1: Strobe Tuner */}
+          <StrobeTuner />
+
+          {/* Verktyg 2: Avancerad Metronom */}
+          <Metronom />
+
+          {/* Verktyg 3: Interaktivt Piano */}
+          <PianoComponent />
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Huvudapplikation ---
 
 export default function App() {
   const [isEditMode, setIsEditMode] = useState(true);
   const [zoom, setZoom] = useState(100);
+  const [showTools, setShowTools] = useState(false);
   
   const [songTitle, setSongTitle] = useState("Ny Låt");
   const [artist, setArtist] = useState("Artist / Kompositör");
@@ -372,6 +1247,7 @@ export default function App() {
   const [bassType, setBassType] = useState('bass4');
   const [frettedType, setFrettedType] = useState('guitar');
   const [frettedMode, setFrettedMode] = useState('chord'); 
+  const [globalCapo, setGlobalCapo] = useState(null);
   
   const [sections, setSections] = useState([createNewSection(true)]);
   
@@ -380,7 +1256,7 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragValue, setDragValue] = useState(true);
   const [dragType, setDragType] = useState(null);
-  const dragRef = useRef({ isDragging: false, fret: null, startStr: null, applied: false, action: 'add' });
+  const dragRef = useRef({ isDragging: false, fret: null, startStr: null, applied: false, action: 'add', fingerToUse: null });
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -557,10 +1433,35 @@ export default function App() {
     setChordModal({ isOpen: false, instrument: null, sectionId: null, step: null, data: null });
   };
 
+  const getUsedChords = (instrumentType) => {
+    const used = [];
+    const seen = new Set();
+    sections.forEach(sec => {
+      if (instrumentType === 'fretted') {
+        Object.values(sec.frettedChordState[frettedType] || {}).forEach(chord => {
+          if (!chord || !chord.name) return;
+          const key = JSON.stringify({ name: chord.name, frets: chord.frets, baseFret: chord.baseFret });
+          if (!seen.has(key)) { seen.add(key); used.push(chord); }
+        });
+      } else if (instrumentType === 'piano') {
+        Object.values(sec.pianoChordState || {}).forEach(chord => {
+          if (!chord) return;
+          const key = JSON.stringify(chord);
+          if (!seen.has(key)) { seen.add(key); used.push(chord); }
+        });
+      }
+    });
+    return used;
+  };
+
   const handleExport = () => {
     setIsEditMode(false);
+    const origTitle = document.title;
+    const newTitle = `${artist ? artist + ' - ' : ''}${songTitle}`.trim() || 'Music Cheat Sheet';
+    document.title = newTitle;
     setTimeout(() => {
       try { window.focus(); window.print(); } catch (e) { console.error("Print blocked", e); }
+      document.title = origTitle;
     }, 500);
   };
 
@@ -619,6 +1520,13 @@ export default function App() {
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${!isEditMode ? 'bg-indigo-500 shadow text-white border border-indigo-400' : 'text-stone-400 hover:text-stone-200 hover:bg-stone-700'}`}
             >
               <Eye size={14} /> Presentation
+            </button>
+
+            <button 
+              onClick={() => setShowTools(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors text-slate-300 hover:text-white hover:bg-slate-700 bg-slate-800 border border-slate-600 shadow ml-1 print:hidden"
+            >
+              <Wrench size={14} /> Verktyg
             </button>
             
             <div className="w-px h-5 bg-stone-700 mx-1"></div>
@@ -689,16 +1597,32 @@ export default function App() {
                   {isFirstPageOfDoc ? (
                     <div className="w-full flex justify-between items-start relative">
                       
-                      <input
-                        type="text"
-                        value={section.tempoKey}
-                        onChange={e => updateSectionField(section.id, 'tempoKey', e.target.value)}
-                        readOnly={!isEditMode}
-                        className={`text-sm font-bold bg-transparent border-none outline-none text-stone-500 placeholder-stone-300 w-1/4 max-w-[160px] mt-3 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-2 -ml-2 py-1' : 'pointer-events-none'}`}
-                        placeholder="Tempo / Tonart..."
-                      />
+                      <div className="flex flex-col gap-1 w-1/4 max-w-[160px] mt-2">
+                        <div className="flex items-center gap-2">
+                           <span className="text-[9px] font-bold text-stone-400 uppercase w-12 text-right">Tempo:</span>
+                           <input
+                             type="text"
+                             value={section.tempo || ''}
+                             onChange={e => updateSectionField(section.id, 'tempo', e.target.value)}
+                             readOnly={!isEditMode}
+                             className={`text-sm font-bold bg-transparent border-none outline-none text-stone-500 placeholder-stone-300 flex-1 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-1' : 'pointer-events-none'}`}
+                             placeholder="BPM"
+                           />
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <span className="text-[9px] font-bold text-stone-400 uppercase w-12 text-right">Tonart:</span>
+                           <input
+                             type="text"
+                             value={section.keySignature || ''}
+                             onChange={e => updateSectionField(section.id, 'keySignature', e.target.value)}
+                             readOnly={!isEditMode}
+                             className={`text-sm font-bold bg-transparent border-none outline-none text-stone-500 placeholder-stone-300 flex-1 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-1' : 'pointer-events-none'}`}
+                             placeholder="T.ex. C"
+                           />
+                        </div>
+                      </div>
 
-                      <div className="flex-1 flex flex-col items-center max-w-[450px] mx-4 gap-2">
+                      <div className="flex-1 flex flex-col items-center min-w-0 px-4 gap-2">
                         <input 
                           type="text"
                           value={songTitle}
@@ -737,14 +1661,30 @@ export default function App() {
                         className={`text-2xl font-black bg-transparent border-none outline-none text-stone-800 placeholder-stone-300 w-2/3 transition-all tracking-tighter ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-2 -ml-2 py-1' : 'pointer-events-none'}`}
                         placeholder="Formdel (t.ex. Vers)..."
                       />
-                      <input
-                        type="text"
-                        value={section.tempoKey}
-                        onChange={e => updateSectionField(section.id, 'tempoKey', e.target.value)}
-                        readOnly={!isEditMode}
-                        className={`text-xs font-bold bg-transparent border-none outline-none text-stone-400 placeholder-stone-300 w-1/3 text-right transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-2 -mr-2 py-1' : 'pointer-events-none'} ${!isEditMode && !section.tempoKey ? 'opacity-0' : ''}`}
-                        placeholder={isEditMode ? "Nytt tempo/tonart? (Valfritt)" : ""}
-                      />
+                      <div className="flex items-center gap-4 w-1/3 justify-end pb-1.5">
+                        <div className={`flex items-center gap-1.5 transition-all ${!isEditMode && !section.tempo ? 'opacity-0' : ''}`}>
+                           <span className="text-[8px] font-bold text-stone-400 uppercase">Tempo:</span>
+                           <input
+                             type="text"
+                             value={section.tempo || ''}
+                             onChange={e => updateSectionField(section.id, 'tempo', e.target.value)}
+                             readOnly={!isEditMode}
+                             className={`text-xs font-bold bg-transparent border-none outline-none text-stone-400 placeholder-stone-300 w-10 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-1' : 'pointer-events-none'}`}
+                             placeholder={isEditMode ? "..." : ""}
+                           />
+                        </div>
+                        <div className={`flex items-center gap-1.5 transition-all ${!isEditMode && !section.keySignature ? 'opacity-0' : ''}`}>
+                           <span className="text-[8px] font-bold text-stone-400 uppercase">Tonart:</span>
+                           <input
+                             type="text"
+                             value={section.keySignature || ''}
+                             onChange={e => updateSectionField(section.id, 'keySignature', e.target.value)}
+                             readOnly={!isEditMode}
+                             className={`text-xs font-bold bg-transparent border-none outline-none text-stone-400 placeholder-stone-300 w-12 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-1' : 'pointer-events-none'}`}
+                             placeholder={isEditMode ? "..." : ""}
+                           />
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -961,7 +1901,7 @@ export default function App() {
                                   {isEditMode && (
                                     <button 
                                       onClick={(e) => { e.stopPropagation(); setSectionFrettedMode(section.id, baseStep, mode === 'chord' ? 'tab' : 'chord'); }}
-                                      className="absolute top-1 right-1 z-40 bg-white/90 backdrop-blur border border-stone-300 rounded px-1.5 py-0.5 text-[8px] font-bold text-stone-500 hover:text-teal-700 hover:bg-teal-50 hover:border-teal-400 opacity-0 group-hover/block:opacity-100 transition-all shadow-md"
+                                      className="absolute -top-3.5 right-1 z-40 bg-white/95 backdrop-blur border border-stone-300 rounded px-1.5 py-0.5 text-[8px] font-bold text-stone-500 hover:text-teal-700 hover:bg-teal-50 hover:border-teal-400 opacity-0 group-hover/block:opacity-100 transition-all shadow-md"
                                       title="Byt mellan Ackord och Tabulatur för denna halvtakt"
                                     >
                                       ⇄ {mode === 'chord' ? 'Tab' : 'Ackord'}
@@ -976,7 +1916,7 @@ export default function App() {
                                       >
                                         {chordData ? chordData.name : (isEditMode ? '+ Ackord' : '')}
                                       </button>
-                                      {chordData && <div className="w-full max-w-[76px] pointer-events-none mt-0.5"><MiniFrettedChord frets={chordData.frets} fingers={chordData.fingers} capo={chordData.capo} strings={activeInstrument.tabStrings.length} baseFret={chordData.baseFret} /></div>}
+                                      {chordData && <div className="w-full max-w-[76px] pointer-events-none mt-0.5"><MiniFrettedChord frets={chordData.frets} fingers={chordData.fingers} capo={globalCapo} strings={activeInstrument.tabStrings.length} baseFret={chordData.baseFret} /></div>}
                                     </div>
                                   ) : (
                                     <div className="flex-1 flex flex-col w-full">
@@ -1145,8 +2085,31 @@ export default function App() {
             </div>
             
             <div className="overflow-y-auto bg-stone-50/50">
+              
+              {/* NYTT: Tidigare använda ackord */}
+              {(() => {
+                const usedChords = getUsedChords(chordModal.instrument);
+                if (usedChords.length === 0) return null;
+                return (
+                  <div className="px-5 pt-4 pb-1">
+                     <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 block">Tidigare använda ackord</span>
+                     <div className="flex flex-wrap gap-2">
+                        {usedChords.map((chord, idx) => (
+                           <button 
+                             key={idx} 
+                             onClick={() => setChordModal(prev => ({...prev, data: {...chord}}))}
+                             className="px-2 py-1 text-[10px] bg-white shadow-sm border border-stone-200 text-stone-600 rounded hover:bg-stone-100 hover:border-stone-300 transition-colors font-bold"
+                           >
+                             {chordModal.instrument === 'fretted' ? chord.name : formatPianoName(chord)}
+                           </button>
+                        ))}
+                     </div>
+                  </div>
+                );
+              })()}
+
               {chordModal.instrument === 'fretted' ? (
-                <div className="p-5 flex flex-col gap-5">
+                <div className="p-5 flex flex-col gap-5 pt-3">
                   <div>
                     <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1 block">Ackordets namn</span>
                     <input 
@@ -1195,10 +2158,10 @@ export default function App() {
 
                             {bf >= 4 && <text x="15" y="25" fontSize="9" fill="#4b5563" fontWeight="bold" textAnchor="end" dominantBaseline="central">{bf}</text>}
 
-                            {chordModal.data.capo && chordModal.data.capo > 0 && chordModal.data.capo <= 9 && (
+                            {globalCapo && globalCapo > 0 && globalCapo <= 9 && (
                               <g>
                                 <rect x="10" y="21" width="100" height="8" fill="#4b5563" rx="4" />
-                                <text x="60" y="17" fontSize="8" fill="#4b5563" fontWeight="bold" textAnchor="middle" letterSpacing="1">CAPO {chordModal.data.capo}</text>
+                                <text x="60" y="17" fontSize="8" fill="#4b5563" fontWeight="bold" textAnchor="middle" letterSpacing="1">CAPO {globalCapo}</text>
                               </g>
                             )}
 
@@ -1332,10 +2295,10 @@ export default function App() {
 
                   <div className="flex gap-3">
                     <div className="flex-1 flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Capo:</span>
+                      <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Capo (Globalt):</span>
                       <select
-                        value={chordModal.data.capo || ''}
-                        onChange={(e) => setChordModal(prev => ({...prev, data: {...prev.data, capo: e.target.value ? parseInt(e.target.value) : null}}))}
+                        value={globalCapo || ''}
+                        onChange={(e) => setGlobalCapo(e.target.value ? parseInt(e.target.value) : null)}
                         className="flex-1 bg-white border border-stone-300 rounded px-2 py-1.5 text-sm font-bold text-stone-700 outline-none focus:ring-2 focus:ring-teal-500 shadow-sm"
                       >
                         <option value="">Inget</option>
@@ -1366,7 +2329,17 @@ export default function App() {
                   </div>
                 </div>
               ) : (
-                <div className="p-5 flex flex-col gap-6">
+                <div className="p-5 flex flex-col gap-6 pt-3">
+                  
+                  {/* Pianospecifik förhandsvisning */}
+                  <div className="flex flex-col items-center select-none bg-white p-4 rounded-lg border border-stone-200 shadow-sm">
+                    <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2">Förhandsvisning</span>
+                    <div className="w-full max-w-[150px]">
+                      <MiniPiano activeKeys={chordModal.data ? getPianoKeys(chordModal.data.root, chordModal.data.quality, chordModal.data.extension, chordModal.data.inversion) : []} />
+                    </div>
+                    <p className="text-[12px] font-bold text-indigo-900 mt-2">{formatPianoName(chordModal.data) || 'Välj ackord'}</p>
+                  </div>
+
                   <div>
                     <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 block">Grundton</span>
                     <div className="grid grid-cols-4 gap-2">
@@ -1453,6 +2426,9 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* --- MUSIKLÄRARENS VERKTYGSLÅDA OVERLAY --- */}
+      {showTools && <MusicToolbox onClose={() => setShowTools(false)} />}
     </div>
   );
 }
