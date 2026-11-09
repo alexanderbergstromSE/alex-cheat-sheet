@@ -362,7 +362,7 @@ const AppLogo = ({ isPrint = false }) => (
     </div>
     <div className="flex flex-col justify-center pt-0.5 shrink-0">
       <h1 className="text-base font-black tracking-tighter text-stone-900 flex items-baseline gap-1 leading-none whitespace-nowrap">
-        MUSIC <span className="font-bold text-stone-500 tracking-tight text-[12px]">CHEAT SHEET</span>
+        ALEX <span className="font-bold text-stone-500 tracking-tight text-[12px]">MUSIC TOOLS</span>
       </h1>
       <span className="text-[6px] font-bold uppercase tracking-widest text-stone-400 mt-0.5 ml-0.5 whitespace-nowrap">Instrumentstämmor & Form</span>
     </div>
@@ -462,8 +462,24 @@ function Metronom() {
         }
     };
 
+    const playTapSound = useCallback(() => {
+        if (!audioCtxRef.current) return;
+        const ctx = audioCtxRef.current;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 1200; // Ljust och tydligt klick
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.002);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.05);
+    }, []);
+
     const handleTapTempo = () => {
         initAudio(); // Väck ljudmotorn om det är första klicket
+        playTapSound(); // Spela upp klickljudet för direkt återkoppling
         const now = performance.now();
         tapTimesRef.current.push(now);
         
@@ -876,14 +892,24 @@ function PianoComponent() {
 
         const reverb = createReverbIR(ctx);
 
+        // NYTT: Kompressor/Limiter för att förhindra distorsion vid stora ackord
+        const compressor = ctx.createDynamicsCompressor();
+        compressor.threshold.value = -12;
+        compressor.knee.value = 10;
+        compressor.ratio.value = 12;
+        compressor.attack.value = 0.001;
+        compressor.release.value = 0.15;
+
         filter.connect(dry);
         filter.connect(reverb);
         reverb.connect(wet);
 
-        dry.connect(ctx.destination);
-        wet.connect(ctx.destination);
+        dry.connect(compressor);
+        wet.connect(compressor);
+        
+        compressor.connect(ctx.destination);
 
-        pianoNodesRef.current = { filter, dry, wet, reverb };
+        pianoNodesRef.current = { filter, dry, wet, reverb, compressor };
     };
 
     const initAudio = useCallback(() => {
@@ -925,8 +951,8 @@ function PianoComponent() {
         osc.frequency.value = freq;
         const vca = ctx.createGain();
         vca.gain.setValueAtTime(0, t);
-        vca.gain.linearRampToValueAtTime(0.5, t + 0.002);
-        vca.gain.exponentialRampToValueAtTime(0.2, t + 0.1);
+        vca.gain.linearRampToValueAtTime(0.25, t + 0.002); // Sänkt från 0.5
+        vca.gain.exponentialRampToValueAtTime(0.1, t + 0.1); // Sänkt från 0.2
         osc.connect(vca);
         vca.connect(filter);
 
@@ -936,7 +962,7 @@ function PianoComponent() {
         harm.frequency.value = freq * 2;
         const harmVca = ctx.createGain();
         harmVca.gain.setValueAtTime(0, t);
-        harmVca.gain.linearRampToValueAtTime(0.3, t + 0.002);
+        harmVca.gain.linearRampToValueAtTime(0.15, t + 0.002); // Sänkt från 0.3
         harmVca.gain.exponentialRampToValueAtTime(0.001, t + 4.0);
         harm.connect(harmVca);
         harmVca.connect(filter);
@@ -1187,8 +1213,6 @@ function PianoComponent() {
 
 // --- Musiklärarens Verktygslåda ---
 const MusicToolbox = ({ onClose }) => {
-  const [audioStarted, setAudioStarted] = useState(false);
-  
   return (
     <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-50 overflow-y-auto text-slate-200 font-sans p-4 sm:p-8 flex flex-col print:hidden">
       <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
@@ -1202,14 +1226,6 @@ const MusicToolbox = ({ onClose }) => {
             Musiklärarens Verktygslåda
           </h2>
           <div className="flex items-center gap-4">
-            {!audioStarted && (
-              <button 
-                onClick={() => setAudioStarted(true)} 
-                className="flex items-center gap-2 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-lg transition-colors shadow-lg shadow-rose-900/20 animate-pulse"
-              >
-                <Power size={14} /> Starta Ljudmotor
-              </button>
-            )}
             <button onClick={onClose} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors border border-slate-600">
               <X size={20} />
             </button>
@@ -1457,7 +1473,7 @@ export default function App() {
   const handleExport = () => {
     setIsEditMode(false);
     const origTitle = document.title;
-    const newTitle = `${artist ? artist + ' - ' : ''}${songTitle}`.trim() || 'Music Cheat Sheet';
+    const newTitle = `${artist ? artist + ' - ' : ''}${songTitle}`.trim() || 'Alex Music Tools';
     document.title = newTitle;
     setTimeout(() => {
       try { window.focus(); window.print(); } catch (e) { console.error("Print blocked", e); }
@@ -1503,71 +1519,78 @@ export default function App() {
       </style>
 
       {/* --- HEADER --- */}
-      <header className="w-full flex flex-wrap items-center justify-between px-6 py-4 bg-stone-900/95 backdrop-blur-md border-b border-stone-900 shadow-xl z-40 sticky top-0 print:hidden text-stone-200">
+      <header className="w-full flex flex-col xl:flex-row items-center justify-between px-6 py-3 gap-4 xl:gap-0 bg-stone-900/95 backdrop-blur-md border-b border-stone-900 shadow-xl z-40 sticky top-0 print:hidden text-stone-200">
         
-        <AppLogo />
+        {/* VÄNSTER: Logotyp */}
+        <div className="flex-1 flex justify-start w-full xl:w-auto">
+          <AppLogo />
+        </div>
 
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2 bg-stone-800 px-2 py-1.5 rounded-lg border border-stone-700 shadow-inner">
-            <button 
-              onClick={() => setIsEditMode(true)} 
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${isEditMode ? 'bg-stone-200 shadow text-stone-900 border border-stone-300' : 'text-stone-400 hover:text-stone-200 hover:bg-stone-700'}`}
-            >
-              <Edit3 size={14} /> Redigera
-            </button>
-            <button 
-              onClick={() => setIsEditMode(false)} 
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${!isEditMode ? 'bg-indigo-500 shadow text-white border border-indigo-400' : 'text-stone-400 hover:text-stone-200 hover:bg-stone-700'}`}
-            >
-              <Eye size={14} /> Presentation
-            </button>
+        {/* MITTEN: Redigera / Presentation Toggle */}
+        <div className="flex-none flex items-center bg-stone-800 p-1 rounded-lg border border-stone-700 shadow-inner">
+          <button 
+            onClick={() => setIsEditMode(true)} 
+            className={`flex items-center gap-2 px-5 py-1.5 rounded-md text-xs font-bold transition-all ${isEditMode ? 'bg-stone-200 shadow-sm text-stone-900 border border-stone-300' : 'text-stone-400 hover:text-stone-200 hover:bg-stone-700 border border-transparent'}`}
+          >
+            <Edit3 size={14} /> Redigera
+          </button>
+          <button 
+            onClick={() => setIsEditMode(false)} 
+            className={`flex items-center gap-2 px-5 py-1.5 rounded-md text-xs font-bold transition-all ${!isEditMode ? 'bg-indigo-500 shadow-sm text-white border border-indigo-400' : 'text-stone-400 hover:text-stone-200 hover:bg-stone-700 border border-transparent'}`}
+          >
+            <Eye size={14} /> Presentation
+          </button>
+        </div>
 
+        {/* HÖGER: Verktyg, Zoom, Export */}
+        <div className="flex-1 flex items-center justify-end gap-3 flex-wrap sm:flex-nowrap w-full xl:w-auto">
+          
+          {/* VERKTYG OCH TAKTER */}
+          <div className="flex items-center bg-stone-800 rounded-lg border border-stone-700 shadow-inner overflow-hidden">
             <button 
               onClick={() => setShowTools(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors text-slate-300 hover:text-white hover:bg-slate-700 bg-slate-800 border border-slate-600 shadow ml-1 print:hidden"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-colors text-slate-300 hover:text-white hover:bg-slate-700 border-r border-stone-700"
             >
               <Wrench size={14} /> Verktyg
             </button>
-            
-            <div className="w-px h-5 bg-stone-700 mx-1"></div>
-            
-            <button 
-              onClick={handleExport} 
-              title="Skriv ut eller spara som PDF (Ctrl+P)"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/40"
-            >
-              <Printer size={14} /> Skriv ut PDF
-            </button>
+            <div className="px-3 py-2 text-xs font-bold text-stone-400 bg-stone-800/50">
+              {totalMeasuresAll} Takter
+            </div>
           </div>
 
           {/* ZOOM KONTROLLER */}
-          <div className="flex items-center gap-1 bg-stone-800 px-1 py-1 rounded-lg border border-stone-700 shadow-inner">
+          <div className="flex items-center bg-stone-800 p-1 rounded-lg border border-stone-700 shadow-inner hidden sm:flex">
             <button 
               onClick={() => setZoom(z => Math.max(50, z - 10))}
-              className="p-1.5 text-stone-400 hover:text-stone-200 hover:bg-stone-700 rounded transition-colors"
+              className="p-1 text-stone-400 hover:text-stone-200 hover:bg-stone-700 rounded transition-colors"
               title="Zooma ut"
             >
               <ZoomOut size={14} />
             </button>
-            <span className="text-xs font-bold text-stone-300 w-11 text-center select-none">{zoom}%</span>
+            <span className="text-xs font-bold text-stone-300 w-10 text-center select-none">{zoom}%</span>
             <button 
               onClick={() => setZoom(z => Math.min(200, z + 10))}
-              className="p-1.5 text-stone-400 hover:text-stone-200 hover:bg-stone-700 rounded transition-colors"
+              className="p-1 text-stone-400 hover:text-stone-200 hover:bg-stone-700 rounded transition-colors"
               title="Zooma in"
             >
               <ZoomIn size={14} />
             </button>
           </div>
-
-          <div className="flex items-center gap-2 bg-stone-800 px-3 py-2 rounded-lg border border-stone-700 shadow-inner">
-            <span className="text-xs font-bold text-stone-400 w-24 text-center">{totalMeasuresAll} Takter Totalt</span>
-          </div>
+            
+          {/* SKRIV UT */}
+          <button 
+            onClick={handleExport} 
+            title="Skriv ut eller spara som PDF (Ctrl+P)"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-colors bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600 hover:text-white hover:border-emerald-500 shadow-inner whitespace-nowrap"
+          >
+            <Printer size={14} /> Skriv ut
+          </button>
         </div>
       </header>
 
       {/* --- DOKUMENT-YTA (Sidor) --- */}
       <div 
-        className="w-full flex flex-col items-center gap-12 mt-12 print:mt-0 print:gap-0 print-no-zoom transition-all"
+        className="w-full flex flex-col items-center gap-12 mt-8 print:mt-0 print:gap-0 print-no-zoom transition-all"
         style={{ zoom: `${zoom}%` }}
       >
         {globalPages.map((page, pageIndex) => {
@@ -1598,7 +1621,7 @@ export default function App() {
                     <div className="w-full flex justify-between items-start relative">
                       
                       <div className="flex flex-col gap-1 w-1/4 max-w-[160px] mt-2">
-                        <div className="flex items-center gap-2">
+                        <div className={`flex items-center gap-2 transition-all ${!isEditMode && !section.tempo ? 'opacity-0 pointer-events-none' : ''}`}>
                            <span className="text-[9px] font-bold text-stone-400 uppercase w-12 text-right">Tempo:</span>
                            <input
                              type="text"
@@ -1606,10 +1629,10 @@ export default function App() {
                              onChange={e => updateSectionField(section.id, 'tempo', e.target.value)}
                              readOnly={!isEditMode}
                              className={`text-sm font-bold bg-transparent border-none outline-none text-stone-500 placeholder-stone-300 flex-1 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-1' : 'pointer-events-none'}`}
-                             placeholder="BPM"
+                             placeholder={isEditMode ? "BPM" : ""}
                            />
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className={`flex items-center gap-2 transition-all ${!isEditMode && !section.keySignature ? 'opacity-0 pointer-events-none' : ''}`}>
                            <span className="text-[9px] font-bold text-stone-400 uppercase w-12 text-right">Tonart:</span>
                            <input
                              type="text"
@@ -1617,7 +1640,7 @@ export default function App() {
                              onChange={e => updateSectionField(section.id, 'keySignature', e.target.value)}
                              readOnly={!isEditMode}
                              className={`text-sm font-bold bg-transparent border-none outline-none text-stone-500 placeholder-stone-300 flex-1 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-1' : 'pointer-events-none'}`}
-                             placeholder="T.ex. C"
+                             placeholder={isEditMode ? "T.ex. C" : ""}
                            />
                         </div>
                       </div>
@@ -1628,16 +1651,16 @@ export default function App() {
                           value={songTitle}
                           onChange={e => setSongTitle(e.target.value)}
                           readOnly={!isEditMode}
-                          className={`font-black bg-transparent border-none outline-none text-stone-900 w-full text-center placeholder-stone-300 transition-all tracking-tighter leading-[1.1] ${getTitleSizeClass(songTitle)} ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'}`}
-                          placeholder="LÅTENS TITEL..."
+                          className={`font-black bg-transparent border-none outline-none text-stone-900 w-full text-center placeholder-stone-300 transition-all tracking-tighter leading-[1.1] ${getTitleSizeClass(songTitle)} ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'} ${!isEditMode && !songTitle ? 'opacity-0' : ''}`}
+                          placeholder={isEditMode ? "LÅTENS TITEL..." : ""}
                         />
                         <input 
                           type="text" 
                           value={artist}
                           onChange={e => setArtist(e.target.value)}
                           readOnly={!isEditMode}
-                          className={`font-bold bg-transparent border-none outline-none text-stone-500 w-full text-center placeholder-stone-300 transition-all tracking-tight ${getArtistSizeClass(artist)} ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'}`}
-                          placeholder="Artist / Kompositör..."
+                          className={`font-bold bg-transparent border-none outline-none text-stone-500 w-full text-center placeholder-stone-300 transition-all tracking-tight ${getArtistSizeClass(artist)} ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'} ${!isEditMode && !artist ? 'opacity-0' : ''}`}
+                          placeholder={isEditMode ? "Artist / Kompositör..." : ""}
                         />
                       </div>
 
@@ -1646,8 +1669,8 @@ export default function App() {
                         value={section.formSection}
                         onChange={e => updateSectionField(section.id, 'formSection', e.target.value)}
                         readOnly={!isEditMode}
-                        className={`text-sm font-bold bg-transparent border-none outline-none text-stone-500 placeholder-stone-300 w-1/4 max-w-[160px] text-right mt-3 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-2 -mr-2 py-1' : 'pointer-events-none'}`}
-                        placeholder="Formdel (t.ex. Intro)..."
+                        className={`text-sm font-bold bg-transparent border-none outline-none text-stone-500 placeholder-stone-300 w-1/4 max-w-[160px] text-right mt-3 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-2 -mr-2 py-1' : 'pointer-events-none'} ${!isEditMode && !section.formSection ? 'opacity-0' : ''}`}
+                        placeholder={isEditMode ? "Formdel (t.ex. Intro)..." : ""}
                       />
                       
                     </div>
@@ -1658,11 +1681,11 @@ export default function App() {
                         value={section.formSection}
                         onChange={e => updateSectionField(section.id, 'formSection', e.target.value)}
                         readOnly={!isEditMode}
-                        className={`text-2xl font-black bg-transparent border-none outline-none text-stone-800 placeholder-stone-300 w-2/3 transition-all tracking-tighter ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-2 -ml-2 py-1' : 'pointer-events-none'}`}
-                        placeholder="Formdel (t.ex. Vers)..."
+                        className={`text-2xl font-black bg-transparent border-none outline-none text-stone-800 placeholder-stone-300 w-2/3 transition-all tracking-tighter ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-2 -ml-2 py-1' : 'pointer-events-none'} ${!isEditMode && !section.formSection ? 'opacity-0' : ''}`}
+                        placeholder={isEditMode ? "Formdel (t.ex. Vers)..." : ""}
                       />
                       <div className="flex items-center gap-4 w-1/3 justify-end pb-1.5">
-                        <div className={`flex items-center gap-1.5 transition-all ${!isEditMode && !section.tempo ? 'opacity-0' : ''}`}>
+                        <div className={`flex items-center gap-1.5 transition-all ${!isEditMode && !section.tempo ? 'opacity-0 pointer-events-none' : ''}`}>
                            <span className="text-[8px] font-bold text-stone-400 uppercase">Tempo:</span>
                            <input
                              type="text"
@@ -1673,7 +1696,7 @@ export default function App() {
                              placeholder={isEditMode ? "..." : ""}
                            />
                         </div>
-                        <div className={`flex items-center gap-1.5 transition-all ${!isEditMode && !section.keySignature ? 'opacity-0' : ''}`}>
+                        <div className={`flex items-center gap-1.5 transition-all ${!isEditMode && !section.keySignature ? 'opacity-0 pointer-events-none' : ''}`}>
                            <span className="text-[8px] font-bold text-stone-400 uppercase">Tonart:</span>
                            <input
                              type="text"
