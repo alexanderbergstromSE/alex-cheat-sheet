@@ -103,8 +103,10 @@ const formatPianoName = (chordData) => {
 
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
-// --- NYTT: Hjälpfunktioner för dynamisk textstorlek ---
+// Hjälpfunktioner för dynamisk textstorlek
 const getTitleSizeClass = (text) => {
+  if (!text) return 'text-4xl md:text-5xl print:text-4xl';
+  if (text.length > 50) return 'text-lg md:text-xl print:text-lg';
   if (text.length > 40) return 'text-xl md:text-2xl print:text-xl';
   if (text.length > 26) return 'text-2xl md:text-3xl print:text-2xl';
   if (text.length > 15) return 'text-3xl md:text-4xl print:text-3xl';
@@ -112,11 +114,12 @@ const getTitleSizeClass = (text) => {
 };
 
 const getArtistSizeClass = (text) => {
+  if (!text) return 'text-lg md:text-xl print:text-lg';
+  if (text.length > 40) return 'text-xs print:text-xs';
   if (text.length > 30) return 'text-sm print:text-sm';
   if (text.length > 20) return 'text-base print:text-base';
   return 'text-lg md:text-xl print:text-lg';
 };
-// --------------------------------------------------------
 
 const createNewSection = (isFirst = false) => ({
   id: generateId(),
@@ -469,10 +472,16 @@ function Metronom() {
         const gain = ctx.createGain();
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.frequency.value = 1200; // Ljust och tydligt klick
+        
+        // Ett extremt kort och tydligt transient-klick
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(1000, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.05);
+        
         gain.gain.setValueAtTime(0, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.002);
+        gain.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.002);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+        
         osc.start(ctx.currentTime);
         osc.stop(ctx.currentTime + 0.05);
     }, []);
@@ -512,7 +521,7 @@ function Metronom() {
     // RENDER (UI)
     // ==========================================
     return (
-        <div className="bg-slate-800 rounded-2xl p-6 flex flex-col h-full border border-slate-700 shadow-xl font-sans text-white select-none">
+        <div className="bg-stone-800 rounded-2xl p-6 flex flex-col h-full border border-stone-700 shadow-xl font-sans text-white select-none">
             <h2 className="text-xl font-semibold flex items-center gap-2 mb-6 shrink-0 text-emerald-400">
                 <Timer size={24} />
                 <span className="text-white">Metronom</span>
@@ -524,25 +533,25 @@ function Metronom() {
                 <div className="text-center mb-6">
                     <div className="flex items-baseline justify-center gap-2">
                         <span className="text-6xl font-bold text-white">{bpm}</span>
-                        <span className="text-slate-400 font-medium">BPM</span>
+                        <span className="text-stone-400 font-medium">BPM</span>
                     </div>
                 </div>
                 
                 {/* Inställningar (Taktart & Notvärde) */}
-                <div className="flex items-center gap-3 mb-8 bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
-                    <span className="text-sm text-slate-400">Taktart:</span>
+                <div className="flex items-center gap-3 mb-8 bg-stone-900/50 p-3 rounded-lg border border-stone-700/50">
+                    <span className="text-sm text-stone-400">Taktart:</span>
                     <input 
                         type="number" 
                         value={beatsPerBar} 
                         onChange={(e) => setBeatsPerBar(parseInt(e.target.value) || 4)}
                         min="1" max="32" 
-                        className="w-14 bg-slate-700 text-white text-center rounded py-1 px-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-14 bg-stone-700 text-white text-center rounded py-1 px-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
-                    <span className="text-slate-400">/</span>
+                    <span className="text-stone-400">/</span>
                     <select 
                         value={noteValue}
                         onChange={(e) => setNoteValue(parseInt(e.target.value) || 4)}
-                        className="bg-slate-700 text-white rounded py-1 px-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="bg-stone-700 text-white rounded py-1 px-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     >
                         <option value="4">4 (Fjärdedelar)</option>
                         <option value="8">8 (Åttondelar)</option>
@@ -556,7 +565,7 @@ function Metronom() {
                     min="30" max="250" 
                     value={bpm} 
                     onChange={(e) => setBpm(parseInt(e.target.value))}
-                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-400 mb-8"
+                    className="w-full h-2 bg-stone-700 rounded-lg appearance-none cursor-pointer accent-emerald-400 mb-8"
                 />
                 
                 {/* Blinkande Prickar (Visuell Metronom) */}
@@ -566,8 +575,8 @@ function Metronom() {
                             key={i} 
                             className={`w-3 h-3 rounded-full transition-all duration-100 ${
                                 i === currentBeat && isMetroPlaying 
-                                ? 'bg-sky-400 shadow-[0_0_10px_#38bdf8]' 
-                                : 'bg-slate-600'
+                                ? 'bg-emerald-400 shadow-[0_0_10px_#34d399]' 
+                                : 'bg-stone-600'
                             }`} 
                         />
                     ))}
@@ -577,12 +586,12 @@ function Metronom() {
                 <div className="grid grid-cols-2 gap-4 w-full mt-auto">
                     <button 
                         onClick={handleTapTempo}
-                        className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors duration-200 active:bg-slate-500 flex flex-col items-center justify-center"
+                        className="bg-stone-700 hover:bg-stone-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors duration-200 active:bg-stone-500 flex flex-col items-center justify-center"
                     >
                         <div className="flex items-center gap-1">
                             <MousePointer2 size={16} /> Tap Tempo
                         </div>
-                        <span className="block text-[10px] text-slate-400 mt-1 font-normal">Klicka i takt</span>
+                        <span className="block text-[10px] text-stone-400 mt-1 font-normal">Klicka i takt</span>
                     </button>
                     
                     <button 
@@ -619,7 +628,7 @@ function StrobeTuner() {
     const [isTunerActive, setIsTunerActive] = useState(false);
     const [tunerNote, setTunerNote] = useState("-");
     const [tunerCents, setTunerCents] = useState("Vilande");
-    const [tunerColor, setTunerColor] = useState("#334155"); // slate-700
+    const [tunerColor, setTunerColor] = useState("#44403c"); // stone-700
     const [tunerError, setTunerError] = useState("");
 
     // ==========================================
@@ -680,7 +689,7 @@ function StrobeTuner() {
         let ac = autoCorrelate(buf, audioCtxRef.current.sampleRate);
 
         if (ac === -1) {
-            setTunerColor("#334155"); // standardgrå
+            setTunerColor("#44403c"); // stone-700
             if (strobeDiscRef.current) strobeDiscRef.current.style.opacity = "0.2";
         } else {
             if (strobeDiscRef.current) strobeDiscRef.current.style.opacity = "1";
@@ -725,7 +734,7 @@ function StrobeTuner() {
             }
             setTunerNote("-");
             setTunerCents("Vilande");
-            setTunerColor("#334155");
+            setTunerColor("#44403c");
             if (strobeDiscRef.current) strobeDiscRef.current.style.opacity = "0.2";
         } else {
             // Starta mikrofon
@@ -762,8 +771,8 @@ function StrobeTuner() {
     // RENDER (UI)
     // ==========================================
     return (
-        <div className="bg-slate-800 rounded-2xl p-6 flex flex-col h-full border border-slate-700 shadow-xl font-sans text-white select-none">
-            <h2 className="text-xl font-semibold flex items-center gap-2 mb-6 shrink-0 text-sky-400">
+        <div className="bg-stone-800 rounded-2xl p-6 flex flex-col h-full border border-stone-700 shadow-xl font-sans text-white select-none">
+            <h2 className="text-xl font-semibold flex items-center gap-2 mb-6 shrink-0 text-teal-400">
                 <Activity size={24} />
                 <span className="text-white">Strobe Tuner</span>
             </h2>
@@ -772,9 +781,9 @@ function StrobeTuner() {
                 
                 {/* Visualiserings-ring */}
                 <div 
-                    className="relative w-48 h-48 sm:w-56 sm:h-56 bg-slate-900 rounded-full flex items-center justify-center border-8 overflow-hidden mb-6 shrink-0 transition-all duration-300"
+                    className="relative w-48 h-48 sm:w-56 sm:h-56 bg-stone-900 rounded-full flex items-center justify-center border-8 overflow-hidden mb-6 shrink-0 transition-all duration-300"
                     style={{
-                        borderColor: tunerColor === '#22c55e' ? '#22c55e' : '#334155',
+                        borderColor: tunerColor === '#22c55e' ? '#22c55e' : '#44403c',
                         boxShadow: tunerColor === '#22c55e' ? '0 0 30px rgba(34, 197, 94, 0.4)' : 'none'
                     }}
                 >
@@ -782,22 +791,22 @@ function StrobeTuner() {
                     <div 
                         ref={strobeDiscRef}
                         className="absolute inset-0 w-full h-full rounded-full opacity-20 transition-opacity duration-300"
-                        style={{ background: 'repeating-conic-gradient(from 0deg, #e2e8f0 0deg 10deg, #0f172a 10deg 20deg)' }}
+                        style={{ background: 'repeating-conic-gradient(from 0deg, #e7e5e4 0deg 10deg, #1c1917 10deg 20deg)' }}
                     />
                     
                     {/* Centrumvisaren */}
                     <div 
-                        className="absolute w-28 h-28 sm:w-32 sm:h-32 bg-slate-800 rounded-full flex flex-col items-center justify-center border-4 z-10 transition-colors duration-300"
+                        className="absolute w-28 h-28 sm:w-32 sm:h-32 bg-stone-800 rounded-full flex flex-col items-center justify-center border-4 z-10 transition-colors duration-300"
                         style={{ borderColor: tunerColor }}
                     >
                         <div className="text-4xl font-bold text-white">{tunerNote}</div>
-                        <div className="text-[10px] text-slate-400 mt-1">{tunerCents}</div>
+                        <div className="text-[10px] text-stone-400 mt-1">{tunerCents}</div>
                     </div>
                 </div>
                 
                 {/* Instruktion */}
-                <p className="text-[10px] text-slate-500 text-center mb-6">
-                    Mönstret stannar när tonen är ren.<br/>Roterar det <strong className="text-slate-300">medurs</strong> = för hög, <strong className="text-slate-300">moturs</strong> = för låg.
+                <p className="text-[10px] text-stone-500 text-center mb-6">
+                    Mönstret stannar när tonen är ren.<br/>Roterar det <strong className="text-stone-300">medurs</strong> = för hög, <strong className="text-stone-300">moturs</strong> = för låg.
                 </p>
                 
                 {/* Felmeddelande (Vid blockerad mikrofon) */}
@@ -809,7 +818,7 @@ function StrobeTuner() {
                 <button 
                     onClick={toggleTuner}
                     className={`w-full font-semibold py-3 px-4 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2 mt-auto ${
-                        isTunerActive ? 'bg-rose-600 hover:bg-rose-500' : 'bg-slate-700 hover:bg-slate-600'
+                        isTunerActive ? 'bg-rose-600 hover:bg-rose-500' : 'bg-stone-700 hover:bg-stone-600'
                     }`}
                 >
                     {isTunerActive ? <MicOff size={20} /> : <Mic size={20} />}
@@ -892,13 +901,17 @@ function PianoComponent() {
 
         const reverb = createReverbIR(ctx);
 
-        // NYTT: Kompressor/Limiter för att förhindra distorsion vid stora ackord
+        // NYTT: Hård kompressor/limiter för att förhindra distorsion vid ackord (brickwall)
         const compressor = ctx.createDynamicsCompressor();
-        compressor.threshold.value = -12;
-        compressor.knee.value = 10;
-        compressor.ratio.value = 12;
+        compressor.threshold.value = -24;
+        compressor.knee.value = 0;
+        compressor.ratio.value = 20;
         compressor.attack.value = 0.001;
-        compressor.release.value = 0.15;
+        compressor.release.value = 0.1;
+
+        // NYTT: Extra master-gain efter kompressorn för att sänka den slutgiltiga volymen
+        const masterGain = ctx.createGain();
+        masterGain.gain.value = 0.3;
 
         filter.connect(dry);
         filter.connect(reverb);
@@ -907,9 +920,10 @@ function PianoComponent() {
         dry.connect(compressor);
         wet.connect(compressor);
         
-        compressor.connect(ctx.destination);
+        compressor.connect(masterGain);
+        masterGain.connect(ctx.destination);
 
-        pianoNodesRef.current = { filter, dry, wet, reverb, compressor };
+        pianoNodesRef.current = { filter, dry, wet, reverb, compressor, masterGain };
     };
 
     const initAudio = useCallback(() => {
@@ -951,8 +965,8 @@ function PianoComponent() {
         osc.frequency.value = freq;
         const vca = ctx.createGain();
         vca.gain.setValueAtTime(0, t);
-        vca.gain.linearRampToValueAtTime(0.25, t + 0.002); // Sänkt från 0.5
-        vca.gain.exponentialRampToValueAtTime(0.1, t + 0.1); // Sänkt från 0.2
+        vca.gain.linearRampToValueAtTime(0.08, t + 0.002); // Ytterligare kraftigt sänkt
+        vca.gain.exponentialRampToValueAtTime(0.01, t + 0.1); 
         osc.connect(vca);
         vca.connect(filter);
 
@@ -962,7 +976,7 @@ function PianoComponent() {
         harm.frequency.value = freq * 2;
         const harmVca = ctx.createGain();
         harmVca.gain.setValueAtTime(0, t);
-        harmVca.gain.linearRampToValueAtTime(0.15, t + 0.002); // Sänkt från 0.3
+        harmVca.gain.linearRampToValueAtTime(0.05, t + 0.002); // Ytterligare kraftigt sänkt
         harmVca.gain.exponentialRampToValueAtTime(0.001, t + 4.0);
         harm.connect(harmVca);
         harmVca.connect(filter);
@@ -1126,7 +1140,7 @@ function PianoComponent() {
     const numWhiteKeys = 15;
 
     return (
-        <div className="bg-slate-800 rounded-2xl p-6 flex flex-col h-full border border-slate-700 shadow-xl font-sans text-white select-none">
+        <div className="bg-stone-800 rounded-2xl p-6 flex flex-col h-full border border-stone-700 shadow-xl font-sans text-white select-none">
             {/* Header / Info */}
             <div className="flex justify-between items-center mb-4 shrink-0">
                 <h2 className="text-xl font-semibold flex items-center gap-2 text-indigo-400">
@@ -1135,15 +1149,15 @@ function PianoComponent() {
                 </h2>
                 <div className="flex items-center gap-3">
                     <div 
-                        className={`text-xs font-semibold px-2 py-1 rounded bg-slate-800 border flex items-center gap-1 transition-colors ${
-                            midiActive ? 'border-emerald-500 text-emerald-400' : 'border-slate-700 text-slate-400'
+                        className={`text-xs font-semibold px-2 py-1 rounded bg-stone-800 border flex items-center gap-1 transition-colors ${
+                            midiActive ? 'border-emerald-500 text-emerald-400' : 'border-stone-700 text-stone-400'
                         }`} 
                         title={midiActive ? "MIDI Ansluten" : "Väntar på MIDI..."}
                     >
-                        <Usb size={14} className={midiActive ? "text-emerald-400" : "text-slate-500"}/>
+                        <Usb size={14} className={midiActive ? "text-emerald-400" : "text-stone-500"}/>
                         MIDI
                     </div>
-                    <div className="bg-slate-900 px-3 py-1.5 rounded border border-slate-700 text-xs">
+                    <div className="bg-stone-900 px-3 py-1.5 rounded border border-stone-700 text-xs">
                         Ton: <span className="font-bold text-indigo-400 w-5 inline-block text-center">{displayNote}</span>
                     </div>
                 </div>
@@ -1152,7 +1166,7 @@ function PianoComponent() {
             {/* Själva klaviaturen */}
             <div className="flex-1 flex items-center justify-center min-h-0 w-full">
                 {/* Aspect Ratio Container (5:2) tvingar proportionerna att förbli korrekta */}
-                <div className="w-full aspect-[5/2] bg-slate-900 rounded-lg p-1 border-b-4 border-slate-950 flex flex-col">
+                <div className="w-full aspect-[5/2] bg-stone-900 rounded-lg p-1 border-b-4 border-stone-950 flex flex-col">
                     
                     <div className="flex relative w-full h-full" onMouseLeave={() => isDraggingRef.current = false}>
                         
@@ -1163,8 +1177,8 @@ function PianoComponent() {
                                 return (
                                     <div 
                                         key={key.note}
-                                        className={`flex-1 border border-slate-300 rounded-b-md relative cursor-pointer select-none transition-colors duration-100 ${
-                                            isActive ? 'bg-slate-300' : 'bg-white'
+                                        className={`flex-1 border border-stone-300 rounded-b-md relative cursor-pointer select-none transition-colors duration-100 ${
+                                            isActive ? 'bg-stone-300' : 'bg-white'
                                         }`}
                                         onPointerDown={(e) => handleKeyPointerDown(e, key)}
                                         onPointerEnter={(e) => handleKeyPointerEnter(e, key)}
@@ -1173,7 +1187,7 @@ function PianoComponent() {
                                     >
                                         {/* Hjälp-etiketter på C-tangenterna */}
                                         {key.note.startsWith('C') && (
-                                            <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-slate-400 pointer-events-none">
+                                            <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-stone-400 pointer-events-none">
                                                 {key.note}
                                             </span>
                                         )}
@@ -1189,7 +1203,7 @@ function PianoComponent() {
                                 <div 
                                     key={key.note}
                                     className={`absolute h-[60%] z-20 rounded-b cursor-pointer select-none transition-colors duration-100 shadow-[inset_0_-4px_4px_rgba(0,0,0,0.5)] transform -translate-x-1/2 ${
-                                        isActive ? 'bg-slate-600' : 'bg-slate-800'
+                                        isActive ? 'bg-stone-600' : 'bg-stone-800'
                                     }`}
                                     style={{ 
                                         width: `calc((100% / ${numWhiteKeys}) * 0.7)`,
@@ -1206,7 +1220,7 @@ function PianoComponent() {
 
                 </div>
             </div>
-            <p className="text-[10px] text-slate-500 text-center mt-4 shrink-0">Du kan dra pekaren över tangenterna (glissando) för att spela skalor.</p>
+            <p className="text-[10px] text-stone-500 text-center mt-4 shrink-0">Du kan dra pekaren över tangenterna (glissando) för att spela skalor.</p>
         </div>
     );
 }
@@ -1214,11 +1228,11 @@ function PianoComponent() {
 // --- Musiklärarens Verktygslåda ---
 const MusicToolbox = ({ onClose }) => {
   return (
-    <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-50 overflow-y-auto text-slate-200 font-sans p-4 sm:p-8 flex flex-col print:hidden">
+    <div className="fixed inset-0 bg-stone-900/95 backdrop-blur-md z-50 overflow-y-auto text-stone-200 font-sans p-4 sm:p-8 flex flex-col print:hidden">
       <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
         
         {/* Header */}
-        <div className="flex justify-between items-center mb-8 bg-slate-800/50 p-4 rounded-2xl border border-slate-700 shadow-lg">
+        <div className="flex justify-between items-center mb-8 bg-stone-800/50 p-4 rounded-2xl border border-stone-700 shadow-lg">
           <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-3 tracking-wide">
             <div className="p-2 bg-emerald-500/20 rounded-lg border border-emerald-500/30">
               <Wrench className="text-emerald-400" size={24} />
@@ -1226,7 +1240,7 @@ const MusicToolbox = ({ onClose }) => {
             Musiklärarens Verktygslåda
           </h2>
           <div className="flex items-center gap-4">
-            <button onClick={onClose} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors border border-slate-600">
+            <button onClick={onClose} className="p-2 bg-stone-800 hover:bg-stone-700 rounded-full transition-colors border border-stone-600">
               <X size={20} />
             </button>
           </div>
@@ -1257,8 +1271,8 @@ export default function App() {
   const [zoom, setZoom] = useState(100);
   const [showTools, setShowTools] = useState(false);
   
-  const [songTitle, setSongTitle] = useState("Ny Låt");
-  const [artist, setArtist] = useState("Artist / Kompositör");
+  const [songTitle, setSongTitle] = useState("");
+  const [artist, setArtist] = useState("");
   
   const [bassType, setBassType] = useState('bass4');
   const [frettedType, setFrettedType] = useState('guitar');
@@ -1549,7 +1563,7 @@ export default function App() {
           <div className="flex items-center bg-stone-800 rounded-lg border border-stone-700 shadow-inner overflow-hidden">
             <button 
               onClick={() => setShowTools(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-colors text-slate-300 hover:text-white hover:bg-slate-700 border-r border-stone-700"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-colors text-stone-300 hover:text-white hover:bg-stone-700 border-r border-stone-700"
             >
               <Wrench size={14} /> Verktyg
             </button>
@@ -1583,7 +1597,7 @@ export default function App() {
             title="Skriv ut eller spara som PDF (Ctrl+P)"
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-colors bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600 hover:text-white hover:border-emerald-500 shadow-inner whitespace-nowrap"
           >
-            <Printer size={14} /> Skriv ut
+            <Printer size={14} /> / PDF
           </button>
         </div>
       </header>
@@ -1681,33 +1695,9 @@ export default function App() {
                         value={section.formSection}
                         onChange={e => updateSectionField(section.id, 'formSection', e.target.value)}
                         readOnly={!isEditMode}
-                        className={`text-2xl font-black bg-transparent border-none outline-none text-stone-800 placeholder-stone-300 w-2/3 transition-all tracking-tighter ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-2 -ml-2 py-1' : 'pointer-events-none'} ${!isEditMode && !section.formSection ? 'opacity-0' : ''}`}
+                        className={`text-2xl font-black bg-transparent border-none outline-none text-stone-800 placeholder-stone-300 w-full transition-all tracking-tighter ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-2 -ml-2 py-1' : 'pointer-events-none'} ${!isEditMode && !section.formSection ? 'opacity-0' : ''}`}
                         placeholder={isEditMode ? "Formdel (t.ex. Vers)..." : ""}
                       />
-                      <div className="flex items-center gap-4 w-1/3 justify-end pb-1.5">
-                        <div className={`flex items-center gap-1.5 transition-all ${!isEditMode && !section.tempo ? 'opacity-0 pointer-events-none' : ''}`}>
-                           <span className="text-[8px] font-bold text-stone-400 uppercase">Tempo:</span>
-                           <input
-                             type="text"
-                             value={section.tempo || ''}
-                             onChange={e => updateSectionField(section.id, 'tempo', e.target.value)}
-                             readOnly={!isEditMode}
-                             className={`text-xs font-bold bg-transparent border-none outline-none text-stone-400 placeholder-stone-300 w-10 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-1' : 'pointer-events-none'}`}
-                             placeholder={isEditMode ? "..." : ""}
-                           />
-                        </div>
-                        <div className={`flex items-center gap-1.5 transition-all ${!isEditMode && !section.keySignature ? 'opacity-0 pointer-events-none' : ''}`}>
-                           <span className="text-[8px] font-bold text-stone-400 uppercase">Tonart:</span>
-                           <input
-                             type="text"
-                             value={section.keySignature || ''}
-                             onChange={e => updateSectionField(section.id, 'keySignature', e.target.value)}
-                             readOnly={!isEditMode}
-                             className={`text-xs font-bold bg-transparent border-none outline-none text-stone-400 placeholder-stone-300 w-12 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-1' : 'pointer-events-none'}`}
-                             placeholder={isEditMode ? "..." : ""}
-                           />
-                        </div>
-                      </div>
                     </div>
                   )}
                 </div>
@@ -1771,7 +1761,7 @@ export default function App() {
                       >
                         <div className="flex-1 flex flex-col py-1 relative z-10">
                           {['hihat', 'snare', 'kick'].map((drumType, index) => (
-                            <div key={drumType} className={`flex flex-1 min-h-[32px] relative ${index < 2 ? 'border-b border-stone-300/80' : ''}`}>
+                            <div key={drumType} className={`flex flex-1 min-h-[32px] print:min-h-[26px] relative ${index < 2 ? 'border-b border-stone-300/80' : ''}`}>
                               
                               <div className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 pointer-events-none bg-white/90 border border-blue-200 p-0.5 rounded-md z-30 shadow-sm flex items-center justify-center scale-[0.80]">
                                 {drumType === 'hihat' ? <HiHatIcon /> : drumType === 'snare' ? <SnareIcon /> : <KickIcon />}
@@ -1847,7 +1837,7 @@ export default function App() {
                       >
                         <div className="flex-1 flex flex-col py-1">
                           {BASS_INSTRUMENTS[bassType].strings.map(str => (
-                            <div key={`bass-${str}`} className="flex flex-1 min-h-[24px] relative">
+                            <div key={`bass-${str}`} className="flex flex-1 min-h-[24px] print:min-h-[18px] relative">
                               <div className="absolute top-1/2 left-0 w-full h-[1.5px] bg-stone-400 pointer-events-none" />
                               <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 text-[9px] text-rose-700 font-bold pointer-events-none bg-white/90 border border-rose-200 px-1 py-[1px] rounded-sm z-20 leading-none shadow-sm">{str}</div>
                               {systemSteps.map(s => (
@@ -1893,7 +1883,7 @@ export default function App() {
                           )
                         }
                       >
-                        <div className="flex-1 flex py-2 min-h-[85px] relative">
+                        <div className="flex-1 flex py-2 min-h-[85px] print:min-h-[75px] relative">
                           <div className="absolute right-full mr-2 top-2 bottom-2 flex flex-col pointer-events-none z-20 w-4">
                             {FRETTED_INSTRUMENTS[frettedType].tabStrings.map(str => (
                               <div key={`header-str-${str}`} className="flex-1 flex items-center justify-end">
@@ -1987,7 +1977,7 @@ export default function App() {
                         title="Piano" icon={Piano} borderColor="border-l-indigo-500" bgHeader="bg-indigo-50/60" bgContent="bg-indigo-50/20" textColor="text-indigo-900" 
                         isEditMode={isEditMode} onClear={() => clearTrackSystem(section.id, 'piano', systemSteps)}
                       >
-                        <div className="flex-1 flex py-2 min-h-[75px]">
+                        <div className="flex-1 flex py-2 min-h-[75px] print:min-h-[55px]">
                           {systemSteps.filter(s => s % stepsPerMeasure === 0).map(measureStart => {
                             const s1 = measureStart;
                             const s2 = measureStart + 4;
@@ -2002,10 +1992,10 @@ export default function App() {
                               const keys = chordData ? getPianoKeys(chordData.root, chordData.quality, chordData.extension, chordData.inversion) : [];
 
                               return (
-                                <StepCell key={`p-ch-${baseStep}${isMerged ? '-merged' : ''}`} step={baseStep} span={isMerged ? 8 : 4} isBeat={false} className="flex-col items-center justify-start p-2" stepsPerMeasure={stepsPerMeasure} isEditMode={isEditMode}>
+                                <StepCell key={`p-ch-${baseStep}${isMerged ? '-merged' : ''}`} step={baseStep} span={isMerged ? 8 : 4} isBeat={false} className="flex-col items-center justify-start p-2 print:p-1" stepsPerMeasure={stepsPerMeasure} isEditMode={isEditMode}>
                                   <button 
                                     onClick={() => isEditMode && openModal('piano', section.id, baseStep)}
-                                    className={`w-[90%] max-w-[90px] mx-auto text-center font-bold text-[11px] outline-none rounded py-1 mb-2 transition-colors flex items-center justify-center shadow-sm leading-none ${chordData ? 'bg-white border border-indigo-200 text-indigo-900 min-h-[24px]' : 'bg-transparent min-h-[24px]'} ${isEditMode && chordData ? 'hover:bg-indigo-50 hover:border-indigo-400' : ''} ${isEditMode && !chordData ? 'text-indigo-400 border border-dashed border-indigo-300 hover:bg-indigo-50 shadow-none' : ''} ${!isEditMode && !chordData ? 'opacity-0 pointer-events-none' : ''}`}
+                                    className={`w-[90%] max-w-[90px] mx-auto text-center font-bold text-[11px] outline-none rounded py-1 mb-2 print:mb-1 transition-colors flex items-center justify-center shadow-sm leading-none ${chordData ? 'bg-white border border-indigo-200 text-indigo-900 min-h-[24px]' : 'bg-transparent min-h-[24px]'} ${isEditMode && chordData ? 'hover:bg-indigo-50 hover:border-indigo-400' : ''} ${isEditMode && !chordData ? 'text-indigo-400 border border-dashed border-indigo-300 hover:bg-indigo-50 shadow-none' : ''} ${!isEditMode && !chordData ? 'opacity-0 pointer-events-none' : ''}`}
                                   >
                                     {chordData ? formatPianoName(chordData) : (isEditMode ? '+ Ackord' : '')}
                                   </button>
