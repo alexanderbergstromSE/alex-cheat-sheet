@@ -106,10 +106,10 @@ const generateId = () => Date.now().toString(36) + Math.random().toString(36).su
 // Hjälpfunktioner för dynamisk textstorlek
 const getTitleSizeClass = (text) => {
   if (!text) return 'text-4xl md:text-5xl print:text-4xl';
-  if (text.length > 50) return 'text-lg md:text-xl print:text-lg';
-  if (text.length > 40) return 'text-xl md:text-2xl print:text-xl';
-  if (text.length > 26) return 'text-2xl md:text-3xl print:text-2xl';
-  if (text.length > 15) return 'text-3xl md:text-4xl print:text-3xl';
+  if (text.length > 35) return 'text-base md:text-lg print:text-base';
+  if (text.length > 25) return 'text-lg md:text-xl print:text-lg';
+  if (text.length > 18) return 'text-xl md:text-2xl print:text-xl';
+  if (text.length > 10) return 'text-2xl md:text-3xl print:text-2xl';
   return 'text-4xl md:text-5xl print:text-4xl';
 };
 
