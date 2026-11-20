@@ -322,14 +322,14 @@ const StepCell = ({ step, span = 1, isBeat, children, className = '', stepsPerMe
 
 const TrackRowContainer = ({ title, icon: Icon, borderColor, bgHeader, bgContent, textColor, children, controls, onClear, isEditMode }) => (
   <div className={`flex border-b border-stone-300 group/track ${bgContent} relative`}>
-    <div className={`w-44 shrink-0 border-r border-stone-300 ${bgHeader} flex flex-col justify-between p-3 border-l-[6px] ${borderColor} z-30 relative`}>
-      <div className={`flex flex-col items-start gap-1.5 ${textColor} w-full opacity-90 pr-6`}>
-        <div className="p-1 bg-white/60 rounded shadow-sm border border-white/50">
-          <Icon size={20} className="shrink-0" />
+    <div className={`w-44 shrink-0 border-r border-stone-300 ${bgHeader} flex flex-col justify-between p-3 print:p-2 border-l-[6px] ${borderColor} z-30 relative`}>
+      <div className={`flex flex-col items-start gap-1.5 print:gap-0.5 ${textColor} w-full opacity-90 pr-6 print:pr-2`}>
+        <div className="p-1 print:p-0.5 bg-white/60 rounded shadow-sm border border-white/50">
+          <Icon size={20} className="shrink-0 print:w-4 print:h-4" />
         </div>
-        <h3 className="font-bold text-[10px] tracking-widest uppercase break-words w-full leading-tight">{title}</h3>
+        <h3 className="font-bold text-[10px] print:text-[9px] tracking-widest uppercase break-words w-full leading-tight">{title}</h3>
       </div>
-      <div className="mt-auto w-full pt-3 flex items-end gap-2 pr-8">
+      <div className="mt-auto w-full pt-3 print:pt-1 flex items-end gap-2 pr-8 print:pr-0">
         {isEditMode && onClear && (
           <button 
             onClick={onClear} 
@@ -1629,7 +1629,7 @@ export default function App() {
               )}
 
               {isFirstPageOfSection && (
-                <div className={`px-10 print:px-6 ${isFirstPageOfDoc ? 'pt-10 pb-8 print:pt-14 print:pb-4' : 'pt-8 pb-3 print:pt-6 print:pb-2'} border-b-2 border-stone-900 mx-8 print:mx-4 mt-4 relative`}>
+                <div className={`px-10 print:px-6 ${isFirstPageOfDoc ? 'pt-10 pb-8 print:pt-8 print:pb-2' : 'pt-8 pb-3 print:pt-4 print:pb-1'} border-b-2 border-stone-900 mx-8 print:mx-4 mt-4 relative`}>
                   
                   {isFirstPageOfDoc ? (
                     <div className="w-full flex justify-between items-start relative">
@@ -1703,8 +1703,8 @@ export default function App() {
                 </div>
               )}
 
-              {/* Innehåll: Rader. Gap-12 blir gap-4 under print för att tvinga dem att få plats */}
-              <div className={`p-8 print:p-4 flex flex-col gap-12 print:gap-4 ${!isFirstPageOfSection ? 'pt-16 print:pt-6' : ''}`}>
+              {/* Innehåll: Rader. Vi krymper gapet extremt mycket vid utskrift för att spara plats */}
+              <div className={`p-8 print:px-4 print:py-2 flex flex-col gap-12 print:gap-1 ${!isFirstPageOfSection ? 'pt-16 print:pt-4' : ''}`}>
                 {systems.map((system, systemIndex) => {
                   const startStep = system.startMeasure * stepsPerMeasure;
                   const endStep = startStep + (system.measureCount * stepsPerMeasure);
@@ -1745,7 +1745,7 @@ export default function App() {
                                   </div>
                                 )}
                                 
-                                <span className="text-[10px] text-center font-mono mt-6 flex items-center justify-center min-h-[14px]">
+                                <span className="text-[10px] text-center font-mono mt-6 print:mt-3 flex items-center justify-center min-h-[14px]">
                                   {isBeat ? <span className="text-stone-800 font-bold">{beatNum}</span> : <EighthNote />}
                                 </span>
                               </div>
@@ -1761,7 +1761,7 @@ export default function App() {
                       >
                         <div className="flex-1 flex flex-col py-1 relative z-10">
                           {['hihat', 'snare', 'kick'].map((drumType, index) => (
-                            <div key={drumType} className={`flex flex-1 min-h-[32px] print:min-h-[26px] relative ${index < 2 ? 'border-b border-stone-300/80' : ''}`}>
+                            <div key={drumType} className={`flex flex-1 min-h-[32px] print:min-h-[22px] relative ${index < 2 ? 'border-b border-stone-300/80' : ''}`}>
                               
                               <div className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 pointer-events-none bg-white/90 border border-blue-200 p-0.5 rounded-md z-30 shadow-sm flex items-center justify-center scale-[0.80]">
                                 {drumType === 'hihat' ? <HiHatIcon /> : drumType === 'snare' ? <SnareIcon /> : <KickIcon />}
@@ -1837,7 +1837,7 @@ export default function App() {
                       >
                         <div className="flex-1 flex flex-col py-1">
                           {BASS_INSTRUMENTS[bassType].strings.map(str => (
-                            <div key={`bass-${str}`} className="flex flex-1 min-h-[24px] print:min-h-[18px] relative">
+                            <div key={`bass-${str}`} className="flex flex-1 min-h-[24px] print:min-h-[16px] relative">
                               <div className="absolute top-1/2 left-0 w-full h-[1.5px] bg-stone-400 pointer-events-none" />
                               <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 text-[9px] text-rose-700 font-bold pointer-events-none bg-white/90 border border-rose-200 px-1 py-[1px] rounded-sm z-20 leading-none shadow-sm">{str}</div>
                               {systemSteps.map(s => (
@@ -1883,7 +1883,7 @@ export default function App() {
                           )
                         }
                       >
-                        <div className="flex-1 flex py-2 min-h-[85px] print:min-h-[75px] relative">
+                        <div className="flex-1 flex py-2 print:py-1 min-h-[85px] print:min-h-[65px] relative">
                           <div className="absolute right-full mr-2 top-2 bottom-2 flex flex-col pointer-events-none z-20 w-4">
                             {FRETTED_INSTRUMENTS[frettedType].tabStrings.map(str => (
                               <div key={`header-str-${str}`} className="flex-1 flex items-center justify-end">
@@ -1977,7 +1977,7 @@ export default function App() {
                         title="Piano" icon={Piano} borderColor="border-l-indigo-500" bgHeader="bg-indigo-50/60" bgContent="bg-indigo-50/20" textColor="text-indigo-900" 
                         isEditMode={isEditMode} onClear={() => clearTrackSystem(section.id, 'piano', systemSteps)}
                       >
-                        <div className="flex-1 flex py-2 min-h-[75px] print:min-h-[55px]">
+                        <div className="flex-1 flex py-2 print:py-1 min-h-[75px] print:min-h-[50px]">
                           {systemSteps.filter(s => s % stepsPerMeasure === 0).map(measureStart => {
                             const s1 = measureStart;
                             const s2 = measureStart + 4;
