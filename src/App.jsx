@@ -106,10 +106,9 @@ const generateId = () => Date.now().toString(36) + Math.random().toString(36).su
 // Hjälpfunktioner för dynamisk textstorlek
 const getTitleSizeClass = (text) => {
   if (!text) return 'text-4xl md:text-5xl print:text-4xl';
-  if (text.length > 35) return 'text-base md:text-lg print:text-base';
-  if (text.length > 25) return 'text-lg md:text-xl print:text-lg';
-  if (text.length > 18) return 'text-xl md:text-2xl print:text-xl';
-  if (text.length > 10) return 'text-2xl md:text-3xl print:text-2xl';
+  if (text.length > 40) return 'text-xl md:text-2xl print:text-xl';
+  if (text.length > 28) return 'text-2xl md:text-3xl print:text-2xl';
+  if (text.length > 18) return 'text-3xl md:text-4xl print:text-3xl';
   return 'text-4xl md:text-5xl print:text-4xl';
 };
 
@@ -1632,34 +1631,10 @@ export default function App() {
                 <div className={`px-10 print:px-6 ${isFirstPageOfDoc ? 'pt-10 pb-8 print:pt-8 print:pb-2' : 'pt-8 pb-3 print:pt-4 print:pb-1'} border-b-2 border-stone-900 mx-8 print:mx-4 mt-4 relative`}>
                   
                   {isFirstPageOfDoc ? (
-                    <div className="w-full flex justify-between items-start relative">
+                    <div className="w-full flex flex-col relative">
                       
-                      <div className="flex flex-col gap-1 w-1/4 max-w-[160px] mt-2">
-                        <div className={`flex items-center gap-2 transition-all ${!isEditMode && !section.tempo ? 'opacity-0 pointer-events-none' : ''}`}>
-                           <span className="text-[9px] font-bold text-stone-400 uppercase w-12 text-right">Tempo:</span>
-                           <input
-                             type="text"
-                             value={section.tempo || ''}
-                             onChange={e => updateSectionField(section.id, 'tempo', e.target.value)}
-                             readOnly={!isEditMode}
-                             className={`text-sm font-bold bg-transparent border-none outline-none text-stone-500 placeholder-stone-300 flex-1 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-1' : 'pointer-events-none'}`}
-                             placeholder={isEditMode ? "BPM" : ""}
-                           />
-                        </div>
-                        <div className={`flex items-center gap-2 transition-all ${!isEditMode && !section.keySignature ? 'opacity-0 pointer-events-none' : ''}`}>
-                           <span className="text-[9px] font-bold text-stone-400 uppercase w-12 text-right">Tonart:</span>
-                           <input
-                             type="text"
-                             value={section.keySignature || ''}
-                             onChange={e => updateSectionField(section.id, 'keySignature', e.target.value)}
-                             readOnly={!isEditMode}
-                             className={`text-sm font-bold bg-transparent border-none outline-none text-stone-500 placeholder-stone-300 flex-1 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-1' : 'pointer-events-none'}`}
-                             placeholder={isEditMode ? "T.ex. C" : ""}
-                           />
-                        </div>
-                      </div>
-
-                      <div className="flex-1 flex flex-col items-center min-w-0 px-4 gap-2">
+                      {/* RAD 1: LÅTTITEL - Får nu ta 100% av bredden högst upp */}
+                      <div className="w-full px-2 mb-2">
                         <input 
                           type="text"
                           value={songTitle}
@@ -1668,25 +1643,62 @@ export default function App() {
                           className={`uppercase font-black bg-transparent border-none outline-none text-stone-900 w-full text-center placeholder-stone-300 transition-all tracking-tighter leading-[1.1] ${getTitleSizeClass(songTitle)} ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'} ${!isEditMode && !songTitle ? 'opacity-0' : ''}`}
                           placeholder={isEditMode ? "LÅTENS TITEL..." : ""}
                         />
-                        <input 
-                          type="text" 
-                          value={artist}
-                          onChange={e => setArtist(e.target.value)}
-                          readOnly={!isEditMode}
-                          className={`font-bold bg-transparent border-none outline-none text-stone-500 w-full text-center placeholder-stone-300 transition-all tracking-tight ${getArtistSizeClass(artist)} ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'} ${!isEditMode && !artist ? 'opacity-0' : ''}`}
-                          placeholder={isEditMode ? "Artist / Kompositör..." : ""}
-                        />
                       </div>
 
-                      <input
-                        type="text"
-                        value={section.formSection}
-                        onChange={e => updateSectionField(section.id, 'formSection', e.target.value)}
-                        readOnly={!isEditMode}
-                        className={`text-sm font-bold bg-transparent border-none outline-none text-stone-500 placeholder-stone-300 w-1/4 max-w-[160px] text-right mt-3 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-2 -mr-2 py-1' : 'pointer-events-none'} ${!isEditMode && !section.formSection ? 'opacity-0' : ''}`}
-                        placeholder={isEditMode ? "Formdel (t.ex. Intro)..." : ""}
-                      />
-                      
+                      {/* RAD 2: Tempo/Tonart, Artist, Formdel */}
+                      <div className="w-full flex justify-between items-center relative">
+                        
+                        {/* Vänster kolumn */}
+                        <div className="flex flex-col gap-1 w-1/3 max-w-[200px]">
+                          <div className={`flex items-center gap-2 transition-all ${!isEditMode && !section.tempo ? 'opacity-0 pointer-events-none' : ''}`}>
+                             <span className="text-[9px] font-bold text-stone-400 uppercase w-12 text-right">Tempo:</span>
+                             <input
+                               type="text"
+                               value={section.tempo || ''}
+                               onChange={e => updateSectionField(section.id, 'tempo', e.target.value)}
+                               readOnly={!isEditMode}
+                               className={`text-sm font-bold bg-transparent border-none outline-none text-stone-500 placeholder-stone-300 flex-1 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-1' : 'pointer-events-none'}`}
+                               placeholder={isEditMode ? "BPM" : ""}
+                             />
+                          </div>
+                          <div className={`flex items-center gap-2 transition-all ${!isEditMode && !section.keySignature ? 'opacity-0 pointer-events-none' : ''}`}>
+                             <span className="text-[9px] font-bold text-stone-400 uppercase w-12 text-right">Tonart:</span>
+                             <input
+                               type="text"
+                               value={section.keySignature || ''}
+                               onChange={e => updateSectionField(section.id, 'keySignature', e.target.value)}
+                               readOnly={!isEditMode}
+                               className={`text-sm font-bold bg-transparent border-none outline-none text-stone-500 placeholder-stone-300 flex-1 transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-1' : 'pointer-events-none'}`}
+                               placeholder={isEditMode ? "T.ex. C" : ""}
+                             />
+                          </div>
+                        </div>
+
+                        {/* Mitten kolumn */}
+                        <div className="flex-1 flex flex-col items-center min-w-0 px-2">
+                          <input 
+                            type="text" 
+                            value={artist}
+                            onChange={e => setArtist(e.target.value)}
+                            readOnly={!isEditMode}
+                            className={`font-bold bg-transparent border-none outline-none text-stone-500 w-full text-center placeholder-stone-300 transition-all tracking-tight ${getArtistSizeClass(artist)} ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'} ${!isEditMode && !artist ? 'opacity-0' : ''}`}
+                            placeholder={isEditMode ? "Artist / Kompositör..." : ""}
+                          />
+                        </div>
+
+                        {/* Höger kolumn */}
+                        <div className="w-1/3 max-w-[200px] flex justify-end">
+                          <input
+                            type="text"
+                            value={section.formSection}
+                            onChange={e => updateSectionField(section.id, 'formSection', e.target.value)}
+                            readOnly={!isEditMode}
+                            className={`text-sm font-bold bg-transparent border-none outline-none text-stone-500 placeholder-stone-300 w-full text-right transition-all ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded px-2 -mr-2 py-1' : 'pointer-events-none'} ${!isEditMode && !section.formSection ? 'opacity-0' : ''}`}
+                            placeholder={isEditMode ? "Formdel (t.ex. Intro)..." : ""}
+                          />
+                        </div>
+                        
+                      </div>
                     </div>
                   ) : (
                     <div className="flex justify-between items-end w-full relative z-10">
