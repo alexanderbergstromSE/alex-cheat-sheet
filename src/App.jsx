@@ -1663,9 +1663,9 @@ export default function App() {
                         <input 
                           type="text"
                           value={songTitle}
-                          onChange={e => setSongTitle(e.target.value)}
+                          onChange={e => setSongTitle(e.target.value.toUpperCase())}
                           readOnly={!isEditMode}
-                          className={`font-black bg-transparent border-none outline-none text-stone-900 w-full text-center placeholder-stone-300 transition-all tracking-tighter leading-[1.1] ${getTitleSizeClass(songTitle)} ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'} ${!isEditMode && !songTitle ? 'opacity-0' : ''}`}
+                          className={`uppercase font-black bg-transparent border-none outline-none text-stone-900 w-full text-center placeholder-stone-300 transition-all tracking-tighter leading-[1.1] ${getTitleSizeClass(songTitle)} ${isEditMode ? 'hover:bg-stone-100 focus:bg-stone-100 rounded py-1' : 'pointer-events-none'} ${!isEditMode && !songTitle ? 'opacity-0' : ''}`}
                           placeholder={isEditMode ? "LÅTENS TITEL..." : ""}
                         />
                         <input 
